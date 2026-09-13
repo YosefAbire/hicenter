@@ -10,20 +10,25 @@ import {
   Pause,
   Plus,
   CheckCircle2,
-  Circle,
   Calendar,
   Zap,
-  BookOpen
+  Trash2,
+  X
 } from "lucide-react";
-import { INITIAL_TASKS, TaskItem } from "@/lib/mockData";
+import { TaskItem } from "@/lib/mockData";
+import { taskService } from "@/lib/services/taskService";
 
 export default function HiTimeView() {
   const [timerMode, setTimerMode] = useState<"focus" | "extended" | "rest">("focus");
-  const [timeLeft, setTimeLeft] = useState(24 * 60 + 18); // 24:18
+  const [timeLeft, setTimeLeft] = useState(24 * 60 + 18);
   const [isRunning, setIsRunning] = useState(false);
   const [muted, setMuted] = useState(false);
   const [selectedHorizon, setSelectedHorizon] = useState<"all" | "now" | "next" | "later">("all");
   const [showAddModal, setShowAddModal] = useState(false);
+
+  // Task & Routine States
+  const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [routines, setRoutines] = useState(taskService.getChecklistRoutines());
 
   // Form states for new task
   const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -31,73 +36,34 @@ export default function HiTimeView() {
   const [newTaskEst, setNewTaskEst] = useState("30 min");
   const [newTaskPeriod, setNewTaskPeriod] = useState<"Now" | "Next" | "Later">("Now");
 
-  const [tasks, setTasks] = useState<TaskItem[]>([
-    {
-      id: "ht1",
-      title: "Calculus BC Problem Set 9 (Problems 12–24)",
-      subject: "Math",
-      dueTime: "Now",
-      timeEstimate: "40 min",
-      duePeriod: "Now",
-      completed: false,
-      notes: "Active Target"
-    },
-    {
-      id: "ht2",
-      title: "Revise Physics lab methodology section",
-      subject: "Physics",
-      dueTime: "Now",
-      timeEstimate: "20 min",
-      duePeriod: "Now",
-      completed: false
-    },
-    {
-      id: "ht3",
-      title: "Review AP Macroeconomics formulas & graphs",
-      subject: "Economics",
-      dueTime: "Completed at 11:20 AM",
-      timeEstimate: "15 min",
-      duePeriod: "Now",
-      completed: true
-    },
-    {
-      id: "ht4",
-      title: "Read Literature Ch. 6–8 (The Great Gatsby)",
-      subject: "English",
-      dueTime: "Thursday",
-      timeEstimate: "45 min",
-      duePeriod: "Next",
-      completed: false
-    },
-    {
-      id: "ht5",
-      title: "Draft History essay thesis & outline",
-      subject: "History",
-      dueTime: "Friday",
-      timeEstimate: "35 min",
-      duePeriod: "Next",
-      completed: false
-    },
-    {
-      id: "ht6",
-      title: "Prepare Chemistry term project proposal",
-      subject: "Chemistry",
-      dueTime: "Next week",
-      timeEstimate: "50 min",
-      duePeriod: "Later",
-      completed: false
-    }
-  ]);
+  useEffect(() => {
+    setTasks(taskService.getTasks());
+  }, []);
 
+  // Timer countdown & chime sound
   useEffect(() => {
     let interval: any = null;
     if (isRunning && timeLeft > 0) {
       interval = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
-    } else if (timeLeft === 0) {
+    } else if (timeLeft === 0 && isRunning) {
       setIsRunning(false);
+      if (!muted && typeof window !== "undefined" && window.AudioContext) {
+        try {
+          const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5 chime
+          gain.gain.setValueAtTime(0.3, ctx.currentTime);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start();
+          osc.stop(ctx.currentTime + 1.2);
+        } catch (e) {}
+      }
     }
     return () => clearInterval(interval);
-  }, [isRunning, timeLeft]);
+  }, [isRunning, timeLeft, muted]);
 
   const handleModeChange = (mode: "focus" | "extended" | "rest") => {
     setTimerMode(mode);
@@ -114,26 +80,34 @@ export default function HiTimeView() {
   };
 
   const toggleTask = (id: string) => {
-    setTasks((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
-    );
+    const updated = taskService.toggleTask(id);
+    setTasks(updated);
+  };
+
+  const deleteTask = (id: string) => {
+    const updated = taskService.deleteTask(id);
+    setTasks(updated);
   };
 
   const handleAddTaskSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTaskTitle.trim()) return;
-    const item: TaskItem = {
-      id: `ht_${Date.now()}`,
+    const newTask = taskService.addTask({
       title: newTaskTitle,
       subject: newTaskSubject,
-      dueTime: "Today",
+      dueTime: newTaskPeriod === "Now" ? "Now" : newTaskPeriod === "Next" ? "Tomorrow" : "Next week",
       timeEstimate: newTaskEst,
       duePeriod: newTaskPeriod,
-      completed: false
-    };
-    setTasks((prev) => [item, ...prev]);
+      completed: false,
+    });
+    setTasks(taskService.getTasks());
     setNewTaskTitle("");
     setShowAddModal(false);
+  };
+
+  const toggleRoutine = (id: string) => {
+    const updated = taskService.toggleRoutine(id);
+    setRoutines(updated);
   };
 
   const nowTasks = tasks.filter((t) => t.duePeriod === "Now");
@@ -201,7 +175,6 @@ export default function HiTimeView() {
 
         {/* Circular Display Ring */}
         <div className="flex items-center justify-center gap-6 py-2">
-          {/* Progress Ring */}
           <div className="relative flex h-24 w-24 items-center justify-center rounded-full border-4 border-[#0D4A47] bg-white shadow-xs">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F1ECE4]">
               <Clock className="h-5 w-5 text-[#0D4A47]" />
@@ -225,7 +198,7 @@ export default function HiTimeView() {
         <div className="flex items-center justify-center gap-3 pt-1">
           <button
             onClick={() => handleModeChange(timerMode)}
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-[#E5DFD5] bg-white text-stone-700 hover:bg-[#F1ECE4] transition"
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-[#E5DFD5] bg-white text-stone-700 hover:bg-[#F1ECE4] transition cursor-pointer"
             title="Reset timer"
           >
             <RotateCcw className="h-4 w-4" />
@@ -233,7 +206,7 @@ export default function HiTimeView() {
 
           <button
             onClick={() => setIsRunning(!isRunning)}
-            className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-[#0D4A47] py-3 text-sm font-semibold text-white hover:bg-[#093734] transition shadow-xs"
+            className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-[#0D4A47] py-3 text-sm font-semibold text-white hover:bg-[#093734] transition shadow-xs cursor-pointer"
           >
             {isRunning ? (
               <>
@@ -250,8 +223,8 @@ export default function HiTimeView() {
 
           <button
             onClick={() => setMuted(!muted)}
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-[#E5DFD5] bg-white text-stone-700 hover:bg-[#F1ECE4] transition"
-            title="Mute chime"
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-[#E5DFD5] bg-white text-stone-700 hover:bg-[#F1ECE4] transition cursor-pointer"
+            title="Toggle sound chime"
           >
             {muted ? <VolumeX className="h-4 w-4 text-stone-400" /> : <Volume2 className="h-4 w-4 text-[#0D4A47]" />}
           </button>
@@ -268,7 +241,7 @@ export default function HiTimeView() {
               : "bg-[#F1ECE4] text-stone-700 hover:bg-[#E5DFD5]"
           }`}
         >
-          All Horizons (5)
+          All Horizons ({tasks.length})
         </button>
         <button
           onClick={() => setSelectedHorizon("now")}
@@ -278,7 +251,7 @@ export default function HiTimeView() {
               : "bg-[#F1ECE4] text-stone-700 hover:bg-[#E5DFD5]"
           }`}
         >
-          Now • 2
+          Now • {nowTasks.length}
         </button>
         <button
           onClick={() => setSelectedHorizon("next")}
@@ -288,7 +261,7 @@ export default function HiTimeView() {
               : "bg-[#F1ECE4] text-stone-700 hover:bg-[#E5DFD5]"
           }`}
         >
-          Next • 2
+          Next • {nextTasks.length}
         </button>
         <button
           onClick={() => setSelectedHorizon("later")}
@@ -298,7 +271,7 @@ export default function HiTimeView() {
               : "bg-[#F1ECE4] text-stone-700 hover:bg-[#E5DFD5]"
           }`}
         >
-          Later • 1
+          Later • {laterTasks.length}
         </button>
       </div>
 
@@ -334,18 +307,18 @@ export default function HiTimeView() {
                     <p className={`text-sm font-semibold leading-snug ${task.completed ? "line-through text-stone-400" : "text-stone-900"}`}>
                       {task.title}
                     </p>
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-stone-500">
-                      <span className="rounded bg-[#F1ECE4] px-2 py-0.5 font-medium text-stone-800">
-                        {task.subject}
-                      </span>
-                      <span className="flex items-center gap-1 font-mono text-[11px]">
-                        <Clock className="h-3 w-3" /> {task.timeEstimate}
-                      </span>
-                      {task.notes && (
-                        <span className="flex items-center gap-1 font-bold text-amber-800 text-[11px]">
-                          <Zap className="h-3 w-3 fill-amber-800" /> {task.notes}
+                    <div className="flex flex-wrap items-center justify-between text-xs text-stone-500">
+                      <div className="flex items-center gap-2">
+                        <span className="rounded bg-[#F1ECE4] px-2 py-0.5 font-medium text-stone-800">
+                          {task.subject}
                         </span>
-                      )}
+                        <span className="flex items-center gap-1 font-mono text-[11px]">
+                          <Clock className="h-3 w-3" /> {task.timeEstimate}
+                        </span>
+                      </div>
+                      <button onClick={() => deleteTask(task.id)} className="text-stone-400 hover:text-red-700">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -364,7 +337,7 @@ export default function HiTimeView() {
               <span>NEXT</span>
               <span className="text-stone-500 font-normal">Later This Week</span>
             </div>
-            <span className="font-mono text-[11px] text-stone-500">2 commitments</span>
+            <span className="font-mono text-[11px] text-stone-500">{nextTasks.length} commitments</span>
           </div>
 
           <div className="space-y-2">
@@ -374,58 +347,29 @@ export default function HiTimeView() {
                 className="rounded-2xl border border-[#E5DFD5] bg-white p-4 shadow-paper space-y-1.5"
               >
                 <div className="flex items-start gap-3">
-                  <div className="mt-0.5 h-5 w-5 rounded bg-stone-200 border border-stone-300" />
+                  <button onClick={() => toggleTask(task.id)} className="mt-0.5">
+                    {task.completed ? (
+                      <CheckCircle2 className="h-5 w-5 text-[#0D4A47]" />
+                    ) : (
+                      <div className="h-5 w-5 rounded bg-stone-200 border border-stone-300" />
+                    )}
+                  </button>
                   <div className="space-y-1 flex-1">
-                    <p className="text-sm font-semibold leading-snug text-stone-900">
+                    <p className={`text-sm font-semibold leading-snug ${task.completed ? "line-through text-stone-400" : "text-stone-900"}`}>
                       {task.title}
                     </p>
-                    <div className="flex items-center gap-2 text-xs text-stone-500 font-mono">
-                      <span className="rounded bg-[#F1ECE4] px-2 py-0.5 font-medium text-stone-800">
-                        {task.subject}
-                      </span>
-                      <span className="flex items-center gap-1 text-[11px]">
-                        <Calendar className="h-3 w-3" /> {task.dueTime}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* SECTION 3: LATER */}
-      {(selectedHorizon === "all" || selectedHorizon === "later") && (
-        <div className="space-y-2.5 pt-2">
-          <div className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2 font-bold uppercase tracking-wider text-stone-900 font-mono">
-              <span className="h-2 w-2 rounded-full bg-stone-400" />
-              <span>LATER</span>
-              <span className="text-stone-500 font-normal">Long-Horizon Milestones</span>
-            </div>
-            <span className="font-mono text-[11px] text-stone-500">Upcoming block</span>
-          </div>
-
-          <div className="space-y-2">
-            {laterTasks.map((task) => (
-              <div
-                key={task.id}
-                className="rounded-2xl border border-[#E5DFD5] bg-white p-4 shadow-paper space-y-1.5"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5 h-5 w-5 rounded bg-stone-200 border border-stone-300" />
-                  <div className="space-y-1 flex-1">
-                    <p className="text-sm font-semibold leading-snug text-stone-900">
-                      {task.title}
-                    </p>
-                    <div className="flex items-center gap-2 text-xs text-stone-500 font-mono">
-                      <span className="rounded bg-[#F1ECE4] px-2 py-0.5 font-medium text-stone-800">
-                        {task.subject}
-                      </span>
-                      <span className="flex items-center gap-1 text-[11px]">
-                        <Calendar className="h-3 w-3" /> {task.dueTime}
-                      </span>
+                    <div className="flex items-center justify-between text-xs text-stone-500 font-mono">
+                      <div className="flex items-center gap-2">
+                        <span className="rounded bg-[#F1ECE4] px-2 py-0.5 font-medium text-stone-800">
+                          {task.subject}
+                        </span>
+                        <span className="flex items-center gap-1 text-[11px]">
+                          <Calendar className="h-3 w-3" /> {task.dueTime}
+                        </span>
+                      </div>
+                      <button onClick={() => deleteTask(task.id)} className="text-stone-400 hover:text-red-700">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -438,39 +382,22 @@ export default function HiTimeView() {
       {/* Add Task Button */}
       <button
         onClick={() => setShowAddModal(true)}
-        className="w-full flex items-center justify-center gap-2 rounded-2xl border border-dashed border-[#E5DFD5] bg-[#F4EFE6] py-3.5 text-xs font-bold text-stone-800 hover:bg-[#E5DFD5] transition"
+        className="w-full flex items-center justify-center gap-2 rounded-2xl border border-dashed border-[#E5DFD5] bg-[#F4EFE6] py-3.5 text-xs font-bold text-stone-800 hover:bg-[#E5DFD5] transition cursor-pointer"
       >
         <Plus className="h-4 w-4" />
         <span>Add a deliberate task</span>
       </button>
 
-      {/* SCHOLAR'S PRINCIPLE Footer Card */}
-      <div className="rounded-2xl border border-[#E5DFD5] bg-[#F1ECE4] p-4 flex items-center gap-3 shadow-paper">
-        <div className="h-14 w-14 overflow-hidden rounded-xl shrink-0 bg-stone-300">
-          <img
-            src="https://images.unsplash.com/photo-1516979187457-637abb4f9353?auto=format&fit=crop&w=200&q=80"
-            alt="Scholar's Principle"
-            className="h-full w-full object-cover"
-          />
-        </div>
-        <div className="space-y-0.5">
-          <span className="block text-[10px] font-bold uppercase tracking-wider text-amber-800 font-mono">
-            SCHOLAR'S PRINCIPLE
-          </span>
-          <p className="font-serif text-sm italic font-semibold text-stone-900">
-            "Focus is the art of knowing what to ignore."
-          </p>
-          <p className="text-[11px] text-stone-500">
-            Quiet study room 4B reservation at 3:15 PM
-          </p>
-        </div>
-      </div>
-
       {/* Add Task Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 backdrop-blur-xs p-4">
           <div className="w-full max-w-sm rounded-2xl border border-[#E5DFD5] bg-white p-6 space-y-4 shadow-paper-md">
-            <h3 className="font-serif text-xl font-bold text-stone-900">Add Deliberate Task</h3>
+            <div className="flex items-center justify-between border-b border-[#E5DFD5] pb-2">
+              <h3 className="font-serif text-xl font-bold text-stone-900">Add Deliberate Task</h3>
+              <button onClick={() => setShowAddModal(false)} className="text-stone-400 hover:text-stone-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
             <form onSubmit={handleAddTaskSubmit} className="space-y-3 text-xs">
               <div>
                 <label className="block font-bold text-stone-700 uppercase">Task Title</label>
@@ -479,7 +406,7 @@ export default function HiTimeView() {
                   required
                   value={newTaskTitle}
                   onChange={(e) => setNewTaskTitle(e.target.value)}
-                  placeholder="e.g. Calculus BC Problem Set 10"
+                  placeholder="e.g. AP Calculus Chapter 6 Exercise 1-5"
                   className="mt-1 w-full rounded-xl border border-[#E5DFD5] bg-[#F9F6F0] p-2.5 text-stone-900 focus:border-[#0D4A47] focus:outline-none"
                 />
               </div>

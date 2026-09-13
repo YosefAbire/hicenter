@@ -1,20 +1,48 @@
 "use client";
 
 import { useState } from "react";
-import { BookOpen, CheckCircle2, Building2, GraduationCap, Lock, Eye, EyeOff, ArrowRight, ShieldCheck } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { BookOpen, CheckCircle2, Building2, GraduationCap, Lock, Eye, EyeOff, ArrowRight, ShieldCheck, AlertCircle } from "lucide-react";
+import { authService, Role } from "@/lib/services/authService";
 
 export default function LoginForm({ onSuccess }: { onSuccess?: () => void }) {
+  const router = useRouter();
   const [email, setEmail] = useState("scholar@academy.edu");
   const [password, setPassword] = useState("••••••••••••");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [selectedRole, setSelectedRole] = useState<Role>("student");
+
+  const handleRolePreset = (role: Role) => {
+    setSelectedRole(role);
+    if (role === "student") setEmail("scholar@academy.edu");
+    if (role === "school_admin") setEmail("elena.rostova@stjude.edu");
+    if (role === "platform_admin") setEmail("platform@hicenter.local");
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!email || !password) {
+      setError("Please enter both school email and password.");
+      return;
+    }
+
+    setError("");
     setLoading(true);
+
     setTimeout(() => {
       setLoading(false);
-      if (onSuccess) onSuccess();
+      const session = authService.login(email, password);
+      authService.switchRole(selectedRole);
+
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        if (selectedRole === "school_admin") router.push("/school-admin/roster");
+        else if (selectedRole === "platform_admin") router.push("/platform/schools");
+        else router.push("/dashboard");
+      }
     }, 600);
   };
 
@@ -57,6 +85,13 @@ export default function LoginForm({ onSuccess }: { onSuccess?: () => void }) {
 
       {/* Form Surface */}
       <div className="rounded-2xl border border-[#E5DFD5] bg-white p-6 space-y-5 shadow-paper-md">
+        {error && (
+          <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 font-medium">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <div className="flex items-center justify-between mb-1.5">
@@ -107,10 +142,46 @@ export default function LoginForm({ onSuccess }: { onSuccess?: () => void }) {
             </div>
           </div>
 
+          {/* Quick Role Selector Preset */}
+          <div className="rounded-xl border border-[#E5DFD5] bg-[#F1ECE4] p-3 text-xs">
+            <span className="block font-mono text-[10px] uppercase font-bold text-stone-500 mb-1">
+              Select Demo Identity
+            </span>
+            <div className="grid grid-cols-3 gap-1">
+              <button
+                type="button"
+                onClick={() => handleRolePreset("student")}
+                className={`rounded-lg py-1.5 text-center font-medium transition ${
+                  selectedRole === "student" ? "bg-[#0D4A47] text-white font-semibold shadow-xs" : "text-stone-700 hover:bg-stone-200"
+                }`}
+              >
+                Student
+              </button>
+              <button
+                type="button"
+                onClick={() => handleRolePreset("school_admin")}
+                className={`rounded-lg py-1.5 text-center font-medium transition ${
+                  selectedRole === "school_admin" ? "bg-[#0D4A47] text-white font-semibold shadow-xs" : "text-stone-700 hover:bg-stone-200"
+                }`}
+              >
+                School Admin
+              </button>
+              <button
+                type="button"
+                onClick={() => handleRolePreset("platform_admin")}
+                className={`rounded-lg py-1.5 text-center font-medium transition ${
+                  selectedRole === "platform_admin" ? "bg-[#0D4A47] text-white font-semibold shadow-xs" : "text-stone-700 hover:bg-stone-200"
+                }`}
+              >
+                Platform Admin
+              </button>
+            </div>
+          </div>
+
           <button
             type="submit"
             disabled={loading}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0D4A47] px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[#093734] focus:outline-none focus:ring-2 focus:ring-[#0D4A47] focus:ring-offset-2 disabled:opacity-70 shadow-xs"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0D4A47] px-4 py-3.5 text-sm font-semibold text-white transition hover:bg-[#093734] focus:outline-none focus:ring-2 focus:ring-[#0D4A47] focus:ring-offset-2 disabled:opacity-70 shadow-xs cursor-pointer"
           >
             <span>{loading ? "Signing in..." : "Sign in"}</span>
             <ArrowRight className="h-4 w-4" />

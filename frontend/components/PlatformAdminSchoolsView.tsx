@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Building2,
   Plus,
@@ -16,12 +16,16 @@ import {
   Mail,
   ShieldCheck,
   ExternalLink,
-  ArrowLeft
+  X
 } from "lucide-react";
+import { SchoolRecord } from "@/lib/mockData";
+import { schoolService } from "@/lib/services/schoolService";
 
 export default function PlatformAdminSchoolsView() {
+  const [schools, setSchools] = useState<SchoolRecord[]>([]);
   const [showProvisionForm, setShowProvisionForm] = useState(true);
   const [selectedRegion, setSelectedRegion] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [schoolName, setSchoolName] = useState("");
   const [domain, setDomain] = useState("");
@@ -29,35 +33,40 @@ export default function PlatformAdminSchoolsView() {
   const [grade11, setGrade11] = useState(true);
   const [grade12, setGrade12] = useState(true);
 
-  const schools = [
-    {
-      code: "SJCA-01",
-      status: "Operational",
-      name: "St. Jude Collegiate Academy",
-      location: "Toronto, ON • Grade 11 & 12",
-      students: "420 Students",
-      admin: "dr.aris@stjude.edu",
-      image: "https://images.unsplash.com/photo-1541829070764-84a7d30dd3f3?auto=format&fit=crop&w=200&q=80"
-    },
-    {
-      code: "NAI-04",
-      status: "Operational",
-      name: "Northridge Academic Institute",
-      location: "Vancouver, BC • Grade 11 & 12",
-      students: "310 Students",
-      admin: "m.keller@northridge.edu",
-      image: "https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=200&q=80"
-    },
-    {
-      code: "OSHC-09",
-      status: "Pending Setup",
-      name: "Oakwood Senior High Center",
-      location: "Calgary, AB • Grade 12 Only",
-      students: "185 Students",
-      admin: "j.thorpe@oakwood.edu",
-      image: "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=200&q=80"
-    }
-  ];
+  useEffect(() => {
+    setSchools(schoolService.getSchools());
+  }, []);
+
+  const handleProvisionSchoolSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!schoolName) return;
+
+    const newSchool = schoolService.provisionSchool({
+      name: schoolName,
+      code: schoolName.slice(0, 4).toUpperCase(),
+      region: selectedRegion === "All" ? "Ontario Academic Network" : selectedRegion,
+      tracks: ["STEM", "Pre-Med", "Humanities"],
+      adminEmail: adminEmail || `admin@${schoolName.toLowerCase().replace(/\s+/g, "")}.edu`,
+      adminName: "Designated Principal",
+    });
+
+    setSchools(schoolService.getSchools());
+    setSchoolName("");
+    setDomain("");
+    setAdminEmail("");
+    alert(`Successfully provisioned school center: ${newSchool.name}! Cryptographic setup token issued.`);
+  };
+
+  const handleResendAdminInvite = (id: string) => {
+    const updated = schoolService.resendAdminInvite(id);
+    setSchools(updated);
+    alert("Admin invitation resent! Status updated to Operational.");
+  };
+
+  const filteredSchools = schools.filter((sch) => {
+    const matchSearch = sch.name.toLowerCase().includes(searchQuery.toLowerCase()) || sch.code.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchSearch;
+  });
 
   return (
     <div className="w-full max-w-md mx-auto space-y-6 pb-20 px-4 pt-2 font-sans">
@@ -78,7 +87,7 @@ export default function PlatformAdminSchoolsView() {
             Schools & Centers
           </h1>
           <span className="rounded-full bg-[#E5DFD5] px-2.5 py-0.5 text-[11px] font-mono text-stone-700">
-            14 Active Hubs
+            {schools.length} Active Hubs
           </span>
         </div>
 
@@ -113,7 +122,7 @@ export default function PlatformAdminSchoolsView() {
       <div className="rounded-2xl border border-[#E5DFD5] bg-[#F1ECE4] p-4 space-y-4 shadow-paper">
         <button
           onClick={() => setShowProvisionForm(!showProvisionForm)}
-          className="w-full flex items-center justify-between text-left"
+          className="w-full flex items-center justify-between text-left cursor-pointer"
         >
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#0D4A47] border border-[#E5DFD5]">
@@ -128,7 +137,7 @@ export default function PlatformAdminSchoolsView() {
         </button>
 
         {showProvisionForm && (
-          <form onSubmit={(e) => e.preventDefault()} className="space-y-3.5 pt-2 border-t border-[#E5DFD5] text-xs">
+          <form onSubmit={handleProvisionSchoolSubmit} className="space-y-3.5 pt-2 border-t border-[#E5DFD5] text-xs">
             <div>
               <label className="block font-bold text-stone-900 uppercase font-mono text-[11px]">
                 OFFICIAL SCHOOL NAME
@@ -136,6 +145,7 @@ export default function PlatformAdminSchoolsView() {
               <div className="relative mt-1">
                 <input
                   type="text"
+                  required
                   value={schoolName}
                   onChange={(e) => setSchoolName(e.target.value)}
                   placeholder="e.g. Westfield Senior Collegiate"
@@ -198,6 +208,7 @@ export default function PlatformAdminSchoolsView() {
               <div className="relative mt-1">
                 <input
                   type="email"
+                  required
                   value={adminEmail}
                   onChange={(e) => setAdminEmail(e.target.value)}
                   placeholder="e.g. principal@westfield.edu"
@@ -212,7 +223,7 @@ export default function PlatformAdminSchoolsView() {
 
             <button
               type="submit"
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0D4A47] py-3 text-xs font-bold text-white shadow-xs hover:bg-[#093734]"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0D4A47] py-3 text-xs font-bold text-white shadow-xs hover:bg-[#093734] cursor-pointer"
             >
               <ShieldCheck className="h-4 w-4" />
               <span>Provision School & Send Admin Invite</span>
@@ -236,52 +247,18 @@ export default function PlatformAdminSchoolsView() {
           <Search className="pointer-events-none absolute left-3.5 top-3 h-4 w-4 text-stone-400" />
           <input
             type="text"
-            placeholder="Filter 14 active institutions..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Filter active institutions..."
             className="w-full rounded-xl border border-[#E5DFD5] bg-white py-2.5 pl-10 pr-4 text-xs text-stone-900 placeholder-stone-400 focus:border-[#0D4A47] focus:outline-none"
           />
         </div>
 
-        {/* Region Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto text-xs font-semibold">
-          <button
-            onClick={() => setSelectedRegion("All")}
-            className={`rounded-full px-3.5 py-1.5 transition ${
-              selectedRegion === "All" ? "bg-[#0D4A47] text-white" : "bg-[#F1ECE4] text-stone-700"
-            }`}
-          >
-            All Regions
-          </button>
-          <button
-            onClick={() => setSelectedRegion("Ontario")}
-            className={`rounded-full px-3.5 py-1.5 transition ${
-              selectedRegion === "Ontario" ? "bg-[#0D4A47] text-white" : "bg-[#F1ECE4] text-stone-700"
-            }`}
-          >
-            Ontario (6)
-          </button>
-          <button
-            onClick={() => setSelectedRegion("BC")}
-            className={`rounded-full px-3.5 py-1.5 transition ${
-              selectedRegion === "BC" ? "bg-[#0D4A47] text-white" : "bg-[#F1ECE4] text-stone-700"
-            }`}
-          >
-            British Columbia (5)
-          </button>
-          <button
-            onClick={() => setSelectedRegion("Alberta")}
-            className={`rounded-full px-3.5 py-1.5 transition ${
-              selectedRegion === "Alberta" ? "bg-[#0D4A47] text-white" : "bg-[#F1ECE4] text-stone-700"
-            }`}
-          >
-            Alberta (3)
-          </button>
-        </div>
-
         {/* Schools Stack */}
         <div className="space-y-3">
-          {schools.map((sch) => (
+          {filteredSchools.map((sch) => (
             <div
-              key={sch.code}
+              key={sch.id}
               className="rounded-2xl border border-[#E5DFD5] bg-white p-4 shadow-paper space-y-3"
             >
               <div className="flex items-start justify-between gap-3">
@@ -290,24 +267,20 @@ export default function PlatformAdminSchoolsView() {
                     <span className="rounded bg-[#F1ECE4] px-1.5 py-0.5 text-[10px] font-bold text-stone-700">
                       {sch.code}
                     </span>
-                    {sch.status === "Operational" ? (
+                    {sch.status === "Active" ? (
                       <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
                         ● Operational
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
-                        ● Pending Setup
+                        ● Provisioning
                       </span>
                     )}
                   </div>
                   <h4 className="font-serif text-lg font-semibold text-stone-900 mt-1">
                     {sch.name}
                   </h4>
-                  <p className="text-xs text-stone-500 font-mono">📍 {sch.location}</p>
-                </div>
-
-                <div className="h-12 w-12 rounded-xl overflow-hidden border border-[#E5DFD5] shrink-0 bg-stone-300">
-                  <img src={sch.image} alt={sch.name} className="h-full w-full object-cover" />
+                  <p className="text-xs text-stone-500 font-mono">📍 {sch.region}</p>
                 </div>
               </div>
 
@@ -315,26 +288,35 @@ export default function PlatformAdminSchoolsView() {
               <div className="rounded-xl border border-[#E5DFD5] bg-[#F1ECE4] p-3 text-xs flex justify-between">
                 <div>
                   <span className="text-[10px] font-mono uppercase text-stone-500 block">Active Scholars</span>
-                  <span className="font-bold text-stone-900">{sch.students}</span>
+                  <span className="font-bold text-stone-900">{sch.studentsCount} Students</span>
                 </div>
                 <div className="text-right">
                   <span className="text-[10px] font-mono uppercase text-stone-500 block">Lead Administrator</span>
-                  <span className="font-mono text-[11px] text-stone-800">{sch.admin}</span>
+                  <span className="font-mono text-[11px] text-stone-800">{sch.adminEmail}</span>
                 </div>
               </div>
 
               {/* Actions */}
               <div className="flex items-center justify-between gap-2 text-xs pt-1">
-                {sch.status === "Pending Setup" ? (
-                  <button className="flex-1 rounded-xl bg-orange-600 py-2 text-center font-bold text-white shadow-xs">
+                {sch.status === "Provisioning" ? (
+                  <button
+                    onClick={() => handleResendAdminInvite(sch.id)}
+                    className="flex-1 rounded-xl bg-orange-600 py-2 text-center font-bold text-white shadow-xs cursor-pointer"
+                  >
                     ▷ Resend Invite
                   </button>
                 ) : (
-                  <button className="flex-1 rounded-xl bg-[#F1ECE4] border border-[#E5DFD5] py-2 text-center font-bold text-stone-800 shadow-xs">
+                  <button
+                    onClick={() => alert(`Managing student roster for ${sch.name}`)}
+                    className="flex-1 rounded-xl bg-[#F1ECE4] border border-[#E5DFD5] py-2 text-center font-bold text-stone-800 shadow-xs cursor-pointer"
+                  >
                     Manage Roster
                   </button>
                 )}
-                <button className="flex-1 rounded-xl bg-[#F1ECE4] border border-[#E5DFD5] py-2 text-center font-bold text-stone-800 shadow-xs">
+                <button
+                  onClick={() => alert(`Configuring domain TLS/SAML for ${sch.name}`)}
+                  className="flex-1 rounded-xl bg-[#F1ECE4] border border-[#E5DFD5] py-2 text-center font-bold text-stone-800 shadow-xs cursor-pointer"
+                >
                   Domain Settings
                 </button>
                 <button className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#F1ECE4] border border-[#E5DFD5] text-stone-700">

@@ -1,16 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, ShieldCheck, Lock, Eye, EyeOff, Info, HelpCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { CheckCircle2, ShieldCheck, Lock, Eye, EyeOff, Info, HelpCircle, AlertCircle, ArrowRight } from "lucide-react";
 import { CURRENT_STUDENT } from "@/lib/mockData";
+import { authService } from "@/lib/services/authService";
 
 export default function ActivateForm({ onSuccess }: { onSuccess?: () => void }) {
+  const router = useRouter();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [activated, setActivated] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const hasLength = password.length >= 10;
   const hasMixed = /[a-z]/.test(password) && /[A-Z]/.test(password);
@@ -19,13 +23,22 @@ export default function ActivateForm({ onSuccess }: { onSuccess?: () => void }) 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isValid) return;
+    if (!isValid) {
+      setError("Please satisfy all password requirements and accept the Honor Agreement.");
+      return;
+    }
+    setError("");
     setLoading(true);
 
     setTimeout(() => {
       setLoading(false);
-      setActivated(true);
-      if (onSuccess) onSuccess();
+      const res = authService.activateToken("demo_token", password);
+      if (res.success) {
+        setActivated(true);
+        if (onSuccess) onSuccess();
+      } else {
+        setError(res.message || "Activation failed.");
+      }
     }, 700);
   };
 
@@ -106,107 +119,132 @@ export default function ActivateForm({ onSuccess }: { onSuccess?: () => void }) 
         </div>
       </div>
 
-      {/* Activation Form */}
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Password input */}
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-xs">
-            <label className="font-bold uppercase tracking-wider text-stone-900 font-mono">
-              CREATE WORKSPACE PASSWORD
+      {activated ? (
+        <div className="rounded-2xl border border-[#E5DFD5] bg-white p-6 text-center space-y-4 shadow-paper-md">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#0D4A47] text-white">
+            <CheckCircle2 className="h-6 w-6" />
+          </div>
+          <h3 className="font-serif text-2xl font-semibold text-stone-900">Workspace Activated</h3>
+          <p className="text-xs text-stone-600">
+            Your private key has been established. You may now sign in to access your scholar dashboard.
+          </p>
+          <button
+            onClick={() => router.push("/login")}
+            className="inline-flex items-center gap-2 rounded-xl bg-[#0D4A47] px-5 py-2.5 text-xs font-semibold text-white hover:bg-[#093734]"
+          >
+            <span>Proceed to Login</span>
+            <ArrowRight className="h-4 w-4" />
+          </button>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 font-medium">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {/* Password input */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <label className="font-bold uppercase tracking-wider text-stone-900 font-mono">
+                CREATE WORKSPACE PASSWORD
+              </label>
+              <span className="font-mono text-[11px] text-stone-400">
+                {password.length}/10 min
+              </span>
+            </div>
+
+            <div className="relative">
+              <input
+                type={showPass ? "text" : "password"}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter secure password"
+                className="w-full rounded-xl border border-[#E5DFD5] bg-white py-3 pl-4 pr-10 text-sm text-stone-900 placeholder-stone-400 focus:border-[#0D4A47] focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPass(!showPass)}
+                className="absolute right-3 top-3.5 text-stone-400 hover:text-stone-700"
+              >
+                {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+
+            {/* Validation Checklist */}
+            <div className="rounded-xl border border-[#E5DFD5] bg-[#F1ECE4] p-3 space-y-1 text-xs text-stone-700">
+              <div className="flex items-center gap-2">
+                <span className={`h-3.5 w-3.5 rounded-full border flex items-center justify-center text-[10px] ${hasLength ? "bg-[#0D4A47] border-[#0D4A47] text-white" : "border-stone-400 bg-white"}`}>
+                  {hasLength ? "✓" : ""}
+                </span>
+                <span className={hasLength ? "font-medium text-stone-900" : "text-stone-600"}>
+                  At least 10 characters
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`h-3.5 w-3.5 rounded-full border flex items-center justify-center text-[10px] ${hasMixed ? "bg-[#0D4A47] border-[#0D4A47] text-white" : "border-stone-400 bg-white"}`}>
+                  {hasMixed ? "✓" : ""}
+                </span>
+                <span className={hasMixed ? "font-medium text-stone-900" : "text-stone-600"}>
+                  Mixed case lettering (uppercase & lowercase)
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Confirm password */}
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold uppercase tracking-wider text-stone-900 font-mono">
+              CONFIRM WORKSPACE PASSWORD
             </label>
-            <span className="font-mono text-[11px] text-stone-400">
-              {password.length}/10 min
-            </span>
-          </div>
-
-          <div className="relative">
             <input
-              type={showPass ? "text" : "password"}
+              type="password"
               required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter secure password"
-              className="w-full rounded-xl border border-[#E5DFD5] bg-white py-3 pl-4 pr-10 text-sm text-stone-900 placeholder-stone-400 focus:border-[#0D4A47] focus:outline-none"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Re-type your password"
+              className="w-full rounded-xl border border-[#E5DFD5] bg-white py-3 px-4 text-sm text-stone-900 placeholder-stone-400 focus:border-[#0D4A47] focus:outline-none"
             />
-            <button
-              type="button"
-              onClick={() => setShowPass(!showPass)}
-              className="absolute right-3 top-3.5 text-stone-400 hover:text-stone-700"
-            >
-              {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </button>
           </div>
 
-          {/* Validation Checklist */}
-          <div className="rounded-xl border border-[#E5DFD5] bg-[#F1ECE4] p-3 space-y-1 text-xs text-stone-700">
-            <div className="flex items-center gap-2">
-              <span className={`h-3.5 w-3.5 rounded-full border flex items-center justify-center text-[10px] ${hasLength ? "bg-[#0D4A47] border-[#0D4A47] text-white" : "border-stone-400 bg-white"}`}>
-                {hasLength ? "✓" : ""}
-              </span>
-              <span className={hasLength ? "font-medium text-stone-900" : "text-stone-600"}>
-                At least 10 characters
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className={`h-3.5 w-3.5 rounded-full border flex items-center justify-center text-[10px] ${hasMixed ? "bg-[#0D4A47] border-[#0D4A47] text-white" : "border-stone-400 bg-white"}`}>
-                {hasMixed ? "✓" : ""}
-              </span>
-              <span className={hasMixed ? "font-medium text-stone-900" : "text-stone-600"}>
-                Mixed case lettering (uppercase & lowercase)
-              </span>
-            </div>
+          {/* Academic Honor Agreement */}
+          <div className="rounded-xl border border-[#E5DFD5] bg-[#F1ECE4] p-4 text-xs text-stone-800 space-y-1">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={agreed}
+                onChange={(e) => setAgreed(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-stone-400 text-[#0D4A47] focus:ring-[#0D4A47]"
+              />
+              <div>
+                <span className="font-bold text-stone-900 block">
+                  Academic Honor & Registry Agreement
+                </span>
+                <span className="text-stone-600 text-[11px] leading-relaxed block mt-0.5">
+                  I acknowledge the HiCenter Academic Integrity & Study Collaboration Guidelines and agree to conduct research with scholarly candor.
+                </span>
+              </div>
+            </label>
           </div>
-        </div>
 
-        {/* Confirm password */}
-        <div className="space-y-1.5">
-          <label className="block text-xs font-bold uppercase tracking-wider text-stone-900 font-mono">
-            CONFIRM WORKSPACE PASSWORD
-          </label>
-          <input
-            type="password"
-            required
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder="Re-type your password"
-            className="w-full rounded-xl border border-[#E5DFD5] bg-white py-3 px-4 text-sm text-stone-900 placeholder-stone-400 focus:border-[#0D4A47] focus:outline-none"
-          />
-        </div>
-
-        {/* Academic Honor Agreement */}
-        <div className="rounded-xl border border-[#E5DFD5] bg-[#F1ECE4] p-4 text-xs text-stone-800 space-y-1">
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={agreed}
-              onChange={(e) => setAgreed(e.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-stone-400 text-[#0D4A47] focus:ring-[#0D4A47]"
-            />
-            <div>
-              <span className="font-bold text-stone-900 block">
-                Academic Honor & Registry Agreement
-              </span>
-              <span className="text-stone-600 text-[11px] leading-relaxed block mt-0.5">
-                I acknowledge the HiCenter Academic Integrity & Study Collaboration Guidelines and agree to conduct research with scholarly candor.
-              </span>
-            </div>
-          </label>
-        </div>
-
-        {/* CTA */}
-        <button
-          type="submit"
-          disabled={!isValid || loading}
-          className={`flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-semibold transition ${
-            isValid
-              ? "bg-[#0D4A47] text-white hover:bg-[#093734] shadow-xs cursor-pointer"
-              : "bg-[#E5DFD5] text-stone-500 cursor-not-allowed"
-          }`}
-        >
-          <Lock className="h-4 w-4" />
-          <span>{loading ? "Activating workspace..." : "Activate account"}</span>
-        </button>
-      </form>
+          {/* CTA */}
+          <button
+            type="submit"
+            disabled={!isValid || loading}
+            className={`flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-semibold transition ${
+              isValid
+                ? "bg-[#0D4A47] text-white hover:bg-[#093734] shadow-xs cursor-pointer"
+                : "bg-[#E5DFD5] text-stone-500 cursor-not-allowed"
+            }`}
+          >
+            <Lock className="h-4 w-4" />
+            <span>{loading ? "Activating workspace..." : "Activate account"}</span>
+          </button>
+        </form>
+      )}
 
       {/* Honor Carrels Footer Card */}
       <div className="rounded-2xl border border-[#E5DFD5] bg-white p-4 flex items-center gap-3 shadow-paper">

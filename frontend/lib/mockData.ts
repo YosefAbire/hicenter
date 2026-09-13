@@ -49,6 +49,7 @@ export interface StudyGroup {
   membersCount: number;
   nextSession: string;
   lead: string;
+  is_live?: boolean;
 }
 
 export interface GraduatePathway {
