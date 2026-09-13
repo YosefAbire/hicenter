@@ -3,64 +3,59 @@
 import { useState, useEffect } from "react";
 import {
   Building2,
-  Plus,
   Search,
-  CheckCircle2,
-  Clock,
-  UserPlus,
-  ShieldAlert,
-  ArrowRight,
-  ChevronUp,
-  ChevronDown,
+  Plus,
+  ShieldCheck,
   Globe,
   Mail,
-  ShieldCheck,
-  ExternalLink,
-  X
+  Users,
+  CheckCircle2,
+  X,
+  Lock,
+  ChevronRight
 } from "lucide-react";
 import { SchoolRecord } from "@/lib/mockData";
 import { schoolService } from "@/lib/services/schoolService";
 
 export default function PlatformAdminSchoolsView() {
   const [schools, setSchools] = useState<SchoolRecord[]>([]);
-  const [showProvisionForm, setShowProvisionForm] = useState(true);
-  const [selectedRegion, setSelectedRegion] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [showAddForm, setShowAddForm] = useState(false);
 
-  const [schoolName, setSchoolName] = useState("");
-  const [domain, setDomain] = useState("");
+  // Provisioning Form state
+  const [name, setName] = useState("");
+  const [code, setCode] = useState("");
+  const [region, setRegion] = useState("Boston Academic District");
   const [adminEmail, setAdminEmail] = useState("");
-  const [grade11, setGrade11] = useState(true);
-  const [grade12, setGrade12] = useState(true);
+  const [adminName, setAdminName] = useState("");
+
+  // Drawer modal state for school settings
+  const [selectedSchool, setSelectedSchool] = useState<SchoolRecord | null>(null);
 
   useEffect(() => {
     setSchools(schoolService.getSchools());
   }, []);
 
-  const handleProvisionSchoolSubmit = (e: React.FormEvent) => {
+  const handleProvisionSchool = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!schoolName) return;
+    if (!name.trim() || !code.trim() || !adminEmail.trim()) return;
 
-    const newSchool = schoolService.provisionSchool({
-      name: schoolName,
-      code: schoolName.slice(0, 4).toUpperCase(),
-      region: selectedRegion === "All" ? "Ontario Academic Network" : selectedRegion,
-      tracks: ["STEM", "Pre-Med", "Humanities"],
-      adminEmail: adminEmail || `admin@${schoolName.toLowerCase().replace(/\s+/g, "")}.edu`,
-      adminName: "Designated Principal",
+    const newSch = schoolService.provisionSchool({
+      name: name.trim(),
+      code: code.trim().toUpperCase(),
+      region,
+      adminEmail: adminEmail.trim(),
+      adminName: adminName.trim() || "School Administrator",
+      tracks: ["STEM", "Pre-Med", "Humanities", "Economics"],
     });
 
     setSchools(schoolService.getSchools());
-    setSchoolName("");
-    setDomain("");
+    setName("");
+    setCode("");
     setAdminEmail("");
-    alert(`Successfully provisioned school center: ${newSchool.name}! Cryptographic setup token issued.`);
-  };
-
-  const handleResendAdminInvite = (id: string) => {
-    const updated = schoolService.resendAdminInvite(id);
-    setSchools(updated);
-    alert("Admin invitation resent! Status updated to Operational.");
+    setAdminName("");
+    setShowAddForm(false);
+    alert(`Provisioned ${newSch.name}! Invitation sent to ${newSch.adminEmail}`);
   };
 
   const filteredSchools = schools.filter((sch) => {
@@ -69,9 +64,9 @@ export default function PlatformAdminSchoolsView() {
   });
 
   return (
-    <div className="w-full max-w-md mx-auto space-y-6 pb-20 px-4 pt-2 font-sans">
-      {/* Top Console Navigation Bar */}
-      <div className="space-y-3">
+    <div className="w-full max-w-6xl mx-auto space-y-6 pb-12 font-sans">
+      {/* Console Header */}
+      <div className="rounded-2xl border border-[#E5DFD5] bg-white p-6 shadow-paper space-y-3">
         <div className="flex items-center justify-between text-xs">
           <div className="flex items-center gap-1.5 font-mono text-[11px] text-stone-500 font-semibold">
             <span className="h-2 w-2 rounded-full bg-stone-900" />
@@ -82,189 +77,141 @@ export default function PlatformAdminSchoolsView() {
           </span>
         </div>
 
-        <div className="flex items-baseline justify-between">
-          <h1 className="font-serif text-3xl font-semibold tracking-tight text-stone-900">
-            Schools & Centers
+        <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-3 pt-1">
+          <h1 className="font-serif text-3xl sm:text-4xl font-semibold tracking-tight text-stone-900">
+            Schools & Academic Hubs
           </h1>
-          <span className="rounded-full bg-[#E5DFD5] px-2.5 py-0.5 text-[11px] font-mono text-stone-700">
-            {schools.length} Active Hubs
+          <span className="rounded-full bg-[#E5DFD5] px-3 py-1 text-xs font-mono text-stone-700 self-start sm:self-auto">
+            {schools.length} Active Hubs Enrolled
           </span>
         </div>
 
-        <p className="text-xs text-stone-600 leading-relaxed">
-          Institutional directory, domain authorizations, and administrative seat issuance for collegiate preparatory programs.
+        <p className="text-xs text-stone-600 leading-relaxed max-w-2xl font-sans">
+          Institutional directory, domain authorizations, TLS SAML identity integration, and seat allocation for scholastic preparatory programs.
         </p>
       </div>
 
-      {/* Hero Stats Banner */}
-      <div className="relative overflow-hidden rounded-2xl border border-[#E5DFD5] bg-stone-900 text-white p-5 space-y-2 shadow-paper-md">
-        <img
-          src="https://images.unsplash.com/photo-1541829070764-84a7d30dd3f3?auto=format&fit=crop&w=800&q=80"
-          alt="Campus Architecture"
-          className="absolute inset-0 h-full w-full object-cover opacity-25"
-        />
-        <div className="relative z-10 space-y-1">
-          <div className="flex items-center justify-between text-xs font-mono">
-            <span className="uppercase tracking-wider text-stone-300 text-[10px]">
-              ACADEMIC YEAR 2024–2025
-            </span>
-            <span className="rounded bg-teal-950/70 border border-teal-800 px-2 py-0.5 text-[10px] text-teal-200">
-              🖥 99.9% Uptime
-            </span>
-          </div>
-          <h3 className="font-serif text-2xl font-semibold">
-            3,890 Upper Scholars Enrolled
-          </h3>
-        </div>
-      </div>
-
-      {/* Provision New School Form Card */}
-      <div className="rounded-2xl border border-[#E5DFD5] bg-[#F1ECE4] p-4 space-y-4 shadow-paper">
-        <button
-          onClick={() => setShowProvisionForm(!showProvisionForm)}
-          className="w-full flex items-center justify-between text-left cursor-pointer"
-        >
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#0D4A47] border border-[#E5DFD5]">
-              <Building2 className="h-5 w-5" />
+      {/* Main Grid: Left Column Provisioning Form, Right Column Schools Directory */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column (1/3 width on desktop): Provision Form */}
+        <div className="space-y-6">
+          <div className="rounded-2xl border border-[#E5DFD5] bg-white p-5 space-y-4 shadow-paper">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-[#0D4A47]" />
+                <h3 className="font-serif text-lg font-semibold text-stone-900">Provision School Hub</h3>
+              </div>
             </div>
-            <div>
-              <h4 className="font-serif text-base font-semibold text-stone-900">Provision New School</h4>
-              <p className="text-[11px] text-stone-500">Deploy institutional tenant & dispatch ad...</p>
-            </div>
-          </div>
-          {showProvisionForm ? <ChevronUp className="h-5 w-5 text-stone-600" /> : <ChevronDown className="h-5 w-5 text-stone-600" />}
-        </button>
 
-        {showProvisionForm && (
-          <form onSubmit={handleProvisionSchoolSubmit} className="space-y-3.5 pt-2 border-t border-[#E5DFD5] text-xs">
-            <div>
-              <label className="block font-bold text-stone-900 uppercase font-mono text-[11px]">
-                OFFICIAL SCHOOL NAME
-              </label>
-              <div className="relative mt-1">
+            <form onSubmit={handleProvisionSchool} className="space-y-3 text-xs">
+              <div>
+                <label className="block font-medium text-stone-700 mb-1">Official Institution Name</label>
                 <input
                   type="text"
                   required
-                  value={schoolName}
-                  onChange={(e) => setSchoolName(e.target.value)}
-                  placeholder="e.g. Westfield Senior Collegiate"
-                  className="w-full rounded-xl border border-[#E5DFD5] bg-white py-2.5 px-3 pr-9 text-stone-900 placeholder-stone-400 focus:border-[#0D4A47] focus:outline-none"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. St. Jude Collegiate Academy"
+                  className="w-full rounded-xl border border-[#E5DFD5] bg-stone-50 p-2.5 text-stone-900 focus:border-[#0D4A47] focus:outline-none"
                 />
-                <Building2 className="pointer-events-none absolute right-3 top-3 h-4 w-4 text-stone-400" />
               </div>
-            </div>
 
-            <div>
-              <label className="block font-bold text-stone-900 uppercase font-mono text-[11px]">
-                INSTITUTIONAL DOMAIN / SUBDOMAIN
-              </label>
-              <div className="mt-1 flex items-center rounded-xl border border-[#E5DFD5] bg-white overflow-hidden">
-                <span className="px-2.5 text-stone-400 font-mono text-[11px]">https://</span>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-medium text-stone-700 mb-1">Institution Code</label>
+                  <input
+                    type="text"
+                    required
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    placeholder="e.g. STJUDE"
+                    className="w-full rounded-xl border border-[#E5DFD5] bg-stone-50 p-2.5 uppercase font-mono text-stone-900 focus:border-[#0D4A47] focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block font-medium text-stone-700 mb-1">Academic Region</label>
+                  <select
+                    value={region}
+                    onChange={(e) => setRegion(e.target.value)}
+                    className="w-full rounded-xl border border-[#E5DFD5] bg-stone-50 p-2.5 text-stone-900 focus:border-[#0D4A47] focus:outline-none"
+                  >
+                    <option>Boston Academic District</option>
+                    <option>Metropolitan West</option>
+                    <option>Pacific Coast Region</option>
+                    <option>Midwest Collegiate Circuit</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-medium text-stone-700 mb-1">Admin Administrator Name</label>
                 <input
                   type="text"
-                  value={domain}
-                  onChange={(e) => setDomain(e.target.value)}
-                  placeholder="westfield.edu"
-                  className="w-full py-2.5 text-stone-900 placeholder-stone-400 focus:outline-none"
+                  value={adminName}
+                  onChange={(e) => setAdminName(e.target.value)}
+                  placeholder="e.g. Elena Rostova"
+                  className="w-full rounded-xl border border-[#E5DFD5] bg-stone-50 p-2.5 text-stone-900 focus:border-[#0D4A47] focus:outline-none"
                 />
-                <span className="px-2.5 text-stone-400 font-mono text-[11px]">.hicenter.org</span>
               </div>
-              <p className="text-[10px] text-stone-500 pt-1 leading-tight">
-                Automated TLS certificate and SAML 2.0 endpoints provisioned upon creation.
-              </p>
-            </div>
 
-            <div>
-              <label className="block font-bold text-stone-900 uppercase font-mono text-[11px] mb-1">
-                GRADES SERVED
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <label className="flex items-center gap-2 rounded-xl border border-[#E5DFD5] bg-white p-2.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={grade11}
-                    onChange={(e) => setGrade11(e.target.checked)}
-                    className="h-4 w-4 rounded border-stone-400 text-[#0D4A47]"
-                  />
-                  <span className="font-semibold text-stone-900">Grade 11 (Junior)</span>
-                </label>
-                <label className="flex items-center gap-2 rounded-xl border border-[#E5DFD5] bg-white p-2.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={grade12}
-                    onChange={(e) => setGrade12(e.target.checked)}
-                    className="h-4 w-4 rounded border-stone-400 text-[#0D4A47]"
-                  />
-                  <span className="font-semibold text-stone-900">Grade 12 (Senior)</span>
-                </label>
-              </div>
-            </div>
-
-            <div>
-              <label className="block font-bold text-stone-900 uppercase font-mono text-[11px]">
-                FIRST SCHOOL ADMIN INVITATION
-              </label>
-              <div className="relative mt-1">
+              <div>
+                <label className="block font-medium text-stone-700 mb-1">Admin Email Address</label>
                 <input
                   type="email"
                   required
                   value={adminEmail}
                   onChange={(e) => setAdminEmail(e.target.value)}
-                  placeholder="e.g. principal@westfield.edu"
-                  className="w-full rounded-xl border border-[#E5DFD5] bg-white py-2.5 px-3 pr-9 text-stone-900 placeholder-stone-400 focus:border-[#0D4A47] focus:outline-none"
+                  placeholder="e.g. elena.rostova@stjude.edu"
+                  className="w-full rounded-xl border border-[#E5DFD5] bg-stone-50 p-2.5 text-stone-900 focus:border-[#0D4A47] focus:outline-none"
                 />
-                <Mail className="pointer-events-none absolute right-3 top-3 h-4 w-4 text-stone-400" />
               </div>
-              <p className="text-[10px] text-stone-500 pt-1 leading-tight">
-                A cryptographic setup token will be issued valid for 72 hours.
-              </p>
-            </div>
 
-            <button
-              type="submit"
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0D4A47] py-3 text-xs font-bold text-white shadow-xs hover:bg-[#093734] cursor-pointer"
-            >
-              <ShieldCheck className="h-4 w-4" />
-              <span>Provision School & Send Admin Invite</span>
-            </button>
-          </form>
-        )}
-      </div>
-
-      {/* MANAGED SCHOOLS DIRECTORY */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between text-xs">
-          <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-stone-900 font-mono">
-            <Building2 className="h-4 w-4 text-[#0D4A47]" />
-            <span>Managed Schools Directory</span>
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  className="w-full rounded-xl bg-[#0D4A47] py-2.5 text-xs font-bold text-white shadow-xs hover:bg-teal-950 transition cursor-pointer text-center"
+                >
+                  Provision School & Send Invite
+                </button>
+              </div>
+            </form>
           </div>
-          <span className="font-mono text-[11px] text-stone-500">Tier-1 Network</span>
+
+          {/* System Protocol Status Card */}
+          <div className="rounded-2xl border border-[#E5DFD5] bg-[#F1ECE4] p-5 space-y-2 shadow-paper text-xs">
+            <div className="flex items-center gap-2 text-[#0D4A47] font-bold font-mono">
+              <ShieldCheck className="h-4 w-4" />
+              <span>TLS SAML Identity Protocol</span>
+            </div>
+            <p className="text-stone-700 leading-relaxed font-sans">
+              All enrolled hubs operate under isolated domain partition schema with zero public registration.
+            </p>
+          </div>
         </div>
 
-        {/* Search */}
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3.5 top-3 h-4 w-4 text-stone-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Filter active institutions..."
-            className="w-full rounded-xl border border-[#E5DFD5] bg-white py-2.5 pl-10 pr-4 text-xs text-stone-900 placeholder-stone-400 focus:border-[#0D4A47] focus:outline-none"
-          />
-        </div>
+        {/* Right Column (2/3 width on desktop): Directory & School Cards */}
+        <div className="lg:col-span-2 space-y-4">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3.5 top-3 h-4 w-4 text-stone-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search schools by name or institution code..."
+              className="w-full rounded-xl border border-[#E5DFD5] bg-white py-2.5 pl-10 pr-4 text-xs text-stone-900 placeholder-stone-400 focus:border-[#0D4A47] focus:outline-none"
+            />
+          </div>
 
-        {/* Schools Stack */}
-        <div className="space-y-3">
-          {filteredSchools.map((sch) => (
-            <div
-              key={sch.id}
-              className="rounded-2xl border border-[#E5DFD5] bg-white p-4 shadow-paper space-y-3"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2 font-mono text-xs">
-                    <span className="rounded bg-[#F1ECE4] px-1.5 py-0.5 text-[10px] font-bold text-stone-700">
+          {/* Managed Schools Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {filteredSchools.map((sch) => (
+              <div
+                key={sch.id}
+                className="rounded-2xl border border-[#E5DFD5] bg-white p-5 shadow-paper space-y-3 flex flex-col justify-between"
+              >
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="rounded bg-[#F1ECE4] px-2 py-0.5 font-mono text-[10px] font-bold text-stone-700">
                       {sch.code}
                     </span>
                     {sch.status === "Active" ? (
@@ -277,67 +224,81 @@ export default function PlatformAdminSchoolsView() {
                       </span>
                     )}
                   </div>
-                  <h4 className="font-serif text-lg font-semibold text-stone-900 mt-1">
+
+                  <h3 className="font-serif text-lg font-semibold text-stone-900 leading-snug">
                     {sch.name}
-                  </h4>
-                  <p className="text-xs text-stone-500 font-mono">📍 {sch.region}</p>
+                  </h3>
+                  <p className="text-xs text-stone-500 font-mono">
+                    Region: {sch.region}
+                  </p>
+
+                  <div className="pt-1 text-xs text-stone-700 space-y-1">
+                    <p>Enrolled Scholars: <span className="font-bold">{sch.studentsCount}</span></p>
+                    <p>Faculty Members: <span className="font-bold">{sch.teachersCount}</span></p>
+                  </div>
+                </div>
+
+                <div className="border-t border-[#E5DFD5] pt-3 flex items-center justify-between text-xs">
+                  <span className="text-[11px] font-mono text-stone-500 truncate max-w-[150px]">
+                    Admin: {sch.adminName}
+                  </span>
+                  <button
+                    onClick={() => setSelectedSchool(sch)}
+                    className="font-bold text-[#0D4A47] hover:underline inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>Config</span>
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               </div>
+            ))}
+          </div>
+        </div>
+      </div>
 
-              {/* Stats Box */}
-              <div className="rounded-xl border border-[#E5DFD5] bg-[#F1ECE4] p-3 text-xs flex justify-between">
-                <div>
-                  <span className="text-[10px] font-mono uppercase text-stone-500 block">Active Scholars</span>
-                  <span className="font-bold text-stone-900">{sch.studentsCount} Students</span>
-                </div>
-                <div className="text-right">
-                  <span className="text-[10px] font-mono uppercase text-stone-500 block">Lead Administrator</span>
-                  <span className="font-mono text-[11px] text-stone-800">{sch.adminEmail}</span>
-                </div>
+      {/* MODAL: SCHOOL CONFIGURATION */}
+      {selectedSchool && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 backdrop-blur-xs p-4">
+          <div className="w-full max-w-lg rounded-2xl border border-[#E5DFD5] bg-white p-6 space-y-4 shadow-paper-md max-h-[85vh] overflow-y-auto">
+            <div className="flex items-start justify-between border-b border-[#E5DFD5] pb-3">
+              <div>
+                <span className="text-xs font-mono text-[#0D4A47] font-bold uppercase">
+                  Institutional Security & SAML
+                </span>
+                <h3 className="font-serif text-2xl font-bold text-stone-900 mt-1">
+                  {selectedSchool.name}
+                </h3>
+              </div>
+              <button
+                onClick={() => setSelectedSchool(null)}
+                className="rounded-lg p-1 text-stone-400 hover:bg-stone-100 hover:text-stone-700"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs text-stone-700">
+              <div className="rounded-xl bg-stone-50 border border-[#E5DFD5] p-3 space-y-2 font-mono text-[11px]">
+                <p>Domain Partition: <span className="font-bold text-stone-900">{selectedSchool.code.toLowerCase()}.hicenter.app</span></p>
+                <p>Primary Admin: <span className="font-bold text-stone-900">{selectedSchool.adminEmail}</span></p>
+                <p>SSO Provider: <span className="font-bold text-emerald-800">Verified TLS SAML v2.0</span></p>
               </div>
 
-              {/* Actions */}
-              <div className="flex items-center justify-between gap-2 text-xs pt-1">
-                {sch.status === "Provisioning" ? (
-                  <button
-                    onClick={() => handleResendAdminInvite(sch.id)}
-                    className="flex-1 rounded-xl bg-orange-600 py-2 text-center font-bold text-white shadow-xs cursor-pointer"
-                  >
-                    ▷ Resend Invite
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => alert(`Managing student roster for ${sch.name}`)}
-                    className="flex-1 rounded-xl bg-[#F1ECE4] border border-[#E5DFD5] py-2 text-center font-bold text-stone-800 shadow-xs cursor-pointer"
-                  >
-                    Manage Roster
-                  </button>
-                )}
+              <div className="pt-2 flex justify-end gap-2">
                 <button
-                  onClick={() => alert(`Configuring domain TLS/SAML for ${sch.name}`)}
-                  className="flex-1 rounded-xl bg-[#F1ECE4] border border-[#E5DFD5] py-2 text-center font-bold text-stone-800 shadow-xs cursor-pointer"
+                  onClick={() => {
+                    alert(`Resent administrative credentials to ${selectedSchool.adminEmail}`);
+                    setSelectedSchool(null);
+                  }}
+                  className="rounded-xl bg-[#0D4A47] px-4 py-2 text-xs font-bold text-white shadow-xs"
                 >
-                  Domain Settings
-                </button>
-                <button className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#F1ECE4] border border-[#E5DFD5] text-stone-700">
-                  <ExternalLink className="h-3.5 w-3.5" />
+                  Resend Admin Key
                 </button>
               </div>
             </div>
-          ))}
+          </div>
         </div>
-      </div>
-
-      {/* Compliance Footer Card */}
-      <div className="rounded-2xl border border-[#E5DFD5] bg-[#F1ECE4] p-4 flex items-start gap-3 shadow-paper text-xs text-stone-700">
-        <ShieldCheck className="h-5 w-5 text-[#0D4A47] shrink-0 mt-0.5" />
-        <div className="space-y-1">
-          <h5 className="font-bold text-stone-900">Academic Data Protocol Compliance</h5>
-          <p className="leading-relaxed text-[11px] text-stone-600">
-            All provisioned schools inherit encrypted cohort isolation complying with FERPA and regional student privacy frameworks. Root administrator actions are logged to immutable ledger.
-          </p>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -13,7 +13,8 @@ import {
   Calendar,
   Zap,
   Trash2,
-  X
+  X,
+  Check
 } from "lucide-react";
 import { TaskItem } from "@/lib/mockData";
 import { taskService } from "@/lib/services/taskService";
@@ -53,19 +54,21 @@ export default function HiTimeView() {
           const osc = ctx.createOscillator();
           const gain = ctx.createGain();
           osc.type = "sine";
-          osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5 chime
+          osc.frequency.setValueAtTime(587.33, ctx.currentTime);
           gain.gain.setValueAtTime(0.3, ctx.currentTime);
           osc.connect(gain);
           gain.connect(ctx.destination);
           osc.start();
           osc.stop(ctx.currentTime + 1.2);
-        } catch (e) {}
+        } catch (e) {
+          console.error("Audio playback error", e);
+        }
       }
     }
     return () => clearInterval(interval);
   }, [isRunning, timeLeft, muted]);
 
-  const handleModeChange = (mode: "focus" | "extended" | "rest") => {
+  const switchMode = (mode: "focus" | "extended" | "rest") => {
     setTimerMode(mode);
     setIsRunning(false);
     if (mode === "focus") setTimeLeft(25 * 60);
@@ -74,9 +77,9 @@ export default function HiTimeView() {
   };
 
   const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
   const toggleTask = (id: string) => {
@@ -89,13 +92,13 @@ export default function HiTimeView() {
     setTasks(updated);
   };
 
-  const handleAddTaskSubmit = (e: React.FormEvent) => {
+  const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTaskTitle.trim()) return;
-    const newTask = taskService.addTask({
-      title: newTaskTitle,
+    taskService.addTask({
+      title: newTaskTitle.trim(),
       subject: newTaskSubject,
-      dueTime: newTaskPeriod === "Now" ? "Now" : newTaskPeriod === "Next" ? "Tomorrow" : "Next week",
+      dueTime: "Today",
       timeEstimate: newTaskEst,
       duePeriod: newTaskPeriod,
       completed: false,
@@ -110,355 +113,336 @@ export default function HiTimeView() {
     setRoutines(updated);
   };
 
-  const nowTasks = tasks.filter((t) => t.duePeriod === "Now");
-  const nextTasks = tasks.filter((t) => t.duePeriod === "Next");
-  const laterTasks = tasks.filter((t) => t.duePeriod === "Later");
+  const filteredTasks = tasks.filter((t) => {
+    if (selectedHorizon === "now") return t.duePeriod === "Now";
+    if (selectedHorizon === "next") return t.duePeriod === "Next";
+    if (selectedHorizon === "later") return t.duePeriod === "Later";
+    return true;
+  });
 
   return (
-    <div className="w-full max-w-md mx-auto space-y-6 pb-20 px-4 pt-2 font-sans">
+    <div className="w-full max-w-6xl mx-auto space-y-6 pb-12 font-sans">
       {/* Top Academic Header */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between text-xs">
-          <span className="font-bold uppercase tracking-wider text-amber-800 font-mono">
-            DEEP WORK SANCTUARY
-          </span>
-          <span className="font-mono text-stone-500 font-medium">
-            Wednesday • Block 3
+      <div className="rounded-2xl border border-[#E5DFD5] bg-white p-6 shadow-paper space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="font-bold uppercase tracking-wider text-amber-800 font-mono text-xs">
+              ⚡ DEEP WORK SANCTUARY
+            </span>
+            <span className="rounded-full bg-[#F1ECE4] px-2.5 py-0.5 text-[11px] font-mono text-stone-700">
+              Wednesday • Block 3
+            </span>
+          </div>
+          <span className="font-mono text-xs font-semibold text-stone-500">
+            60m remaining in current focus block
           </span>
         </div>
 
-        <div className="flex items-baseline justify-between">
-          <h1 className="font-serif text-3xl font-semibold tracking-tight text-stone-900">
-            Today’s Cadence
+        <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 pt-1">
+          <h1 className="font-serif text-3xl sm:text-4xl font-semibold tracking-tight text-stone-900">
+            HiTime Focus & Cadence
           </h1>
-          <span className="font-mono text-xs font-semibold text-stone-700">
-            60m remaining
-          </span>
-        </div>
-      </div>
-
-      {/* Timer Card Surface */}
-      <div className="rounded-2xl border border-[#E5DFD5] bg-[#F4EFE6] p-5 space-y-5 shadow-paper text-center">
-        {/* Mode Pills */}
-        <div className="inline-flex rounded-xl bg-[#E5DFD5]/70 p-1 text-xs font-medium text-stone-700 w-full">
           <button
-            onClick={() => handleModeChange("focus")}
-            className={`flex-1 rounded-lg py-2 transition font-semibold ${
-              timerMode === "focus"
-                ? "bg-[#0D4A47] text-white shadow-xs"
-                : "hover:text-stone-900"
-            }`}
+            onClick={() => setShowAddModal(true)}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-[#0D4A47] px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-teal-950 transition cursor-pointer self-start sm:self-auto"
           >
-            Deep Focus (25m)
-          </button>
-          <button
-            onClick={() => handleModeChange("extended")}
-            className={`flex-1 rounded-lg py-2 transition ${
-              timerMode === "extended"
-                ? "bg-[#0D4A47] text-white font-semibold shadow-xs"
-                : "hover:text-stone-900"
-            }`}
-          >
-            Extended (50m)
-          </button>
-          <button
-            onClick={() => handleModeChange("rest")}
-            className={`flex-1 rounded-lg py-2 transition ${
-              timerMode === "rest"
-                ? "bg-[#0D4A47] text-white font-semibold shadow-xs"
-                : "hover:text-stone-900"
-            }`}
-          >
-            Rest (5m)
-          </button>
-        </div>
-
-        {/* Circular Display Ring */}
-        <div className="flex items-center justify-center gap-6 py-2">
-          <div className="relative flex h-24 w-24 items-center justify-center rounded-full border-4 border-[#0D4A47] bg-white shadow-xs">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F1ECE4]">
-              <Clock className="h-5 w-5 text-[#0D4A47]" />
-            </div>
-          </div>
-
-          <div className="text-left space-y-0.5">
-            <div className="flex items-baseline gap-1">
-              <span className="font-mono text-4xl font-bold tracking-tight text-stone-900 sm:text-5xl">
-                {formatTime(timeLeft)}
-              </span>
-              <span className="font-mono text-xs text-stone-500 font-medium">rem</span>
-            </div>
-            <p className="text-xs text-stone-600 font-medium">
-              Focused: <span className="font-semibold text-stone-900">Calculus BC</span>
-            </p>
-          </div>
-        </div>
-
-        {/* Controls Row */}
-        <div className="flex items-center justify-center gap-3 pt-1">
-          <button
-            onClick={() => handleModeChange(timerMode)}
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-[#E5DFD5] bg-white text-stone-700 hover:bg-[#F1ECE4] transition cursor-pointer"
-            title="Reset timer"
-          >
-            <RotateCcw className="h-4 w-4" />
-          </button>
-
-          <button
-            onClick={() => setIsRunning(!isRunning)}
-            className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-[#0D4A47] py-3 text-sm font-semibold text-white hover:bg-[#093734] transition shadow-xs cursor-pointer"
-          >
-            {isRunning ? (
-              <>
-                <Pause className="h-4 w-4" />
-                <span>Pause</span>
-              </>
-            ) : (
-              <>
-                <Play className="h-4 w-4 fill-white" />
-                <span>Commence</span>
-              </>
-            )}
-          </button>
-
-          <button
-            onClick={() => setMuted(!muted)}
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-[#E5DFD5] bg-white text-stone-700 hover:bg-[#F1ECE4] transition cursor-pointer"
-            title="Toggle sound chime"
-          >
-            {muted ? <VolumeX className="h-4 w-4 text-stone-400" /> : <Volume2 className="h-4 w-4 text-[#0D4A47]" />}
+            <Plus className="h-4 w-4" />
+            <span>Add Task</span>
           </button>
         </div>
       </div>
 
-      {/* Horizon Segment Chips */}
-      <div className="flex items-center gap-1.5 overflow-x-auto text-xs font-semibold">
-        <button
-          onClick={() => setSelectedHorizon("all")}
-          className={`rounded-full px-3.5 py-1.5 transition ${
-            selectedHorizon === "all"
-              ? "bg-[#0D4A47] text-white"
-              : "bg-[#F1ECE4] text-stone-700 hover:bg-[#E5DFD5]"
-          }`}
-        >
-          All Horizons ({tasks.length})
-        </button>
-        <button
-          onClick={() => setSelectedHorizon("now")}
-          className={`rounded-full px-3.5 py-1.5 transition ${
-            selectedHorizon === "now"
-              ? "bg-[#0D4A47] text-white"
-              : "bg-[#F1ECE4] text-stone-700 hover:bg-[#E5DFD5]"
-          }`}
-        >
-          Now • {nowTasks.length}
-        </button>
-        <button
-          onClick={() => setSelectedHorizon("next")}
-          className={`rounded-full px-3.5 py-1.5 transition ${
-            selectedHorizon === "next"
-              ? "bg-[#0D4A47] text-white"
-              : "bg-[#F1ECE4] text-stone-700 hover:bg-[#E5DFD5]"
-          }`}
-        >
-          Next • {nextTasks.length}
-        </button>
-        <button
-          onClick={() => setSelectedHorizon("later")}
-          className={`rounded-full px-3.5 py-1.5 transition ${
-            selectedHorizon === "later"
-              ? "bg-[#0D4A47] text-white"
-              : "bg-[#F1ECE4] text-stone-700 hover:bg-[#E5DFD5]"
-          }`}
-        >
-          Later • {laterTasks.length}
-        </button>
-      </div>
-
-      {/* SECTION 1: NOW */}
-      {(selectedHorizon === "all" || selectedHorizon === "now") && (
-        <div className="space-y-2.5">
-          <div className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2 font-bold uppercase tracking-wider text-stone-900 font-mono">
-              <span className="h-2 w-2 rounded-full bg-amber-800" />
-              <span>NOW</span>
-              <span className="text-stone-500 font-normal">Immediate Priorities</span>
+      {/* Responsive Grid: Left Column Timer & Routines, Right Column Task Horizons */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column (1/3 width on desktop) */}
+        <div className="space-y-6">
+          {/* Timer Card Surface */}
+          <div className="rounded-2xl border border-[#E5DFD5] bg-white p-6 text-center space-y-6 shadow-paper">
+            {/* Mode Pills */}
+            <div className="inline-flex items-center rounded-xl bg-[#F1ECE4] p-1 text-xs font-semibold text-stone-700 border border-[#E5DFD5]">
+              <button
+                onClick={() => switchMode("focus")}
+                className={`rounded-lg px-3 py-1.5 transition ${timerMode === "focus" ? "bg-[#0D4A47] text-white shadow-xs" : "hover:text-stone-900"}`}
+              >
+                Deep Focus (25m)
+              </button>
+              <button
+                onClick={() => switchMode("extended")}
+                className={`rounded-lg px-3 py-1.5 transition ${timerMode === "extended" ? "bg-[#0D4A47] text-white shadow-xs" : "hover:text-stone-900"}`}
+              >
+                Extended (50m)
+              </button>
+              <button
+                onClick={() => switchMode("rest")}
+                className={`rounded-lg px-3 py-1.5 transition ${timerMode === "rest" ? "bg-[#0D4A47] text-white shadow-xs" : "hover:text-stone-900"}`}
+              >
+                Rest (5m)
+              </button>
             </div>
-            <span className="font-mono text-[11px] font-bold text-amber-800">Est. 60 min</span>
-          </div>
 
-          <div className="space-y-2">
-            {nowTasks.map((task) => (
-              <div
-                key={task.id}
-                className={`rounded-2xl border p-4 shadow-paper space-y-1.5 transition ${
-                  task.completed ? "border-[#E5DFD5] bg-[#F1ECE4]/60" : "border-[#E5DFD5] bg-white"
+            {/* Timer Display */}
+            <div className="space-y-2 py-2">
+              <div className="relative mx-auto flex h-48 w-48 items-center justify-center rounded-full border-4 border-[#0D4A47] bg-[#F9F6F0] shadow-inner">
+                <div className="text-center">
+                  <span className="font-mono text-4xl font-bold tracking-tighter text-stone-900">
+                    {formatTime(timeLeft)}
+                  </span>
+                  <span className="block font-mono text-[10px] uppercase font-bold tracking-widest text-stone-500 pt-1">
+                    {isRunning ? "FOCUS IN PROGRESS" : "PAUSED"}
+                  </span>
+                </div>
+              </div>
+              <p className="text-xs text-stone-500 font-mono">
+                Target: AP Chemistry Stoichiometry
+              </p>
+            </div>
+
+            {/* Timer Controls */}
+            <div className="flex items-center justify-center gap-3">
+              <button
+                onClick={() => switchMode(timerMode)}
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#E5DFD5] bg-stone-50 text-stone-600 hover:bg-stone-100"
+                title="Reset timer"
+              >
+                <RotateCcw className="h-4 w-4" />
+              </button>
+
+              <button
+                onClick={() => setIsRunning(!isRunning)}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-xs font-bold text-white shadow-xs transition cursor-pointer max-w-[180px] ${
+                  isRunning ? "bg-amber-800 hover:bg-amber-900" : "bg-[#0D4A47] hover:bg-teal-950"
                 }`}
               >
-                <div className="flex items-start gap-3">
-                  <button onClick={() => toggleTask(task.id)} className="mt-0.5">
-                    {task.completed ? (
-                      <CheckCircle2 className="h-5 w-5 text-[#0D4A47]" />
-                    ) : (
-                      <div className="h-5 w-5 rounded bg-stone-200 border border-stone-300" />
-                    )}
-                  </button>
-                  <div className="space-y-1 flex-1">
-                    <p className={`text-sm font-semibold leading-snug ${task.completed ? "line-through text-stone-400" : "text-stone-900"}`}>
-                      {task.title}
-                    </p>
-                    <div className="flex flex-wrap items-center justify-between text-xs text-stone-500">
-                      <div className="flex items-center gap-2">
-                        <span className="rounded bg-[#F1ECE4] px-2 py-0.5 font-medium text-stone-800">
-                          {task.subject}
-                        </span>
-                        <span className="flex items-center gap-1 font-mono text-[11px]">
-                          <Clock className="h-3 w-3" /> {task.timeEstimate}
-                        </span>
-                      </div>
-                      <button onClick={() => deleteTask(task.id)} className="text-stone-400 hover:text-red-700">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                {isRunning ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-white" />}
+                <span>{isRunning ? "Pause Session" : "Commence"}</span>
+              </button>
+
+              <button
+                onClick={() => setMuted(!muted)}
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#E5DFD5] bg-stone-50 text-stone-600 hover:bg-stone-100"
+                title={muted ? "Unmute chime" : "Mute chime"}
+              >
+                {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+
+          {/* Daily Routines Checklist */}
+          <div className="rounded-2xl border border-[#E5DFD5] bg-[#F1ECE4] p-5 space-y-3 shadow-paper">
+            <div className="flex items-center justify-between border-b border-[#E5DFD5] pb-2">
+              <span className="font-mono text-xs font-bold uppercase text-stone-900">
+                DAILY CADENCE ROUTINES
+              </span>
+              <span className="font-mono text-[10px] text-stone-500">
+                {routines.filter(r => r.done).length}/{routines.length} Done
+              </span>
+            </div>
+            <div className="space-y-2">
+              {routines.map((r) => (
+                <div
+                  key={r.id}
+                  onClick={() => toggleRoutine(r.id)}
+                  className="flex items-center justify-between p-2 rounded-xl bg-white border border-[#E5DFD5] cursor-pointer hover:border-[#0D4A47] transition"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className={`flex h-4 w-4 items-center justify-center rounded border ${r.done ? "bg-[#0D4A47] border-[#0D4A47] text-white" : "border-stone-300"}`}>
+                      {r.done && <Check className="h-3 w-3" />}
                     </div>
+                    <span className={`text-xs ${r.done ? "line-through text-stone-400" : "text-stone-800 font-medium"}`}>
+                      {r.label}
+                    </span>
                   </div>
+                  <span className="font-mono text-[10px] text-stone-400">{r.time || "Daily"}</span>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
-      )}
 
-      {/* SECTION 2: NEXT */}
-      {(selectedHorizon === "all" || selectedHorizon === "next") && (
-        <div className="space-y-2.5 pt-2">
-          <div className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2 font-bold uppercase tracking-wider text-stone-900 font-mono">
-              <span className="h-2 w-2 rounded-full bg-stone-800" />
-              <span>NEXT</span>
-              <span className="text-stone-500 font-normal">Later This Week</span>
+        {/* Right Column (2/3 width on desktop): Task Horizons */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Horizon Selection Chips */}
+          <div className="flex items-center justify-between border-b border-[#E5DFD5] pb-3">
+            <div className="flex flex-wrap gap-2 text-xs font-mono">
+              {(["all", "now", "next", "later"] as const).map((h) => (
+                <button
+                  key={h}
+                  onClick={() => setSelectedHorizon(h)}
+                  className={`rounded-xl px-3 py-1.5 font-bold capitalize transition cursor-pointer ${
+                    selectedHorizon === h
+                      ? "bg-[#0D4A47] text-white shadow-xs"
+                      : "bg-white text-stone-600 border border-[#E5DFD5] hover:bg-stone-50"
+                  }`}
+                >
+                  {h} ({h === "all" ? tasks.length : tasks.filter((t) => t.duePeriod.toLowerCase() === h).length})
+                </button>
+              ))}
             </div>
-            <span className="font-mono text-[11px] text-stone-500">{nextTasks.length} commitments</span>
           </div>
 
-          <div className="space-y-2">
-            {nextTasks.map((task) => (
+          {/* Task Horizon List */}
+          <div className="space-y-3">
+            {filteredTasks.map((task) => (
               <div
                 key={task.id}
-                className="rounded-2xl border border-[#E5DFD5] bg-white p-4 shadow-paper space-y-1.5"
+                className={`rounded-2xl border p-4 shadow-paper transition space-y-2 ${
+                  task.completed ? "border-[#E5DFD5] bg-[#F1ECE4]/60 opacity-80" : "border-[#E5DFD5] bg-white"
+                }`}
               >
-                <div className="flex items-start gap-3">
-                  <button onClick={() => toggleTask(task.id)} className="mt-0.5">
-                    {task.completed ? (
-                      <CheckCircle2 className="h-5 w-5 text-[#0D4A47]" />
-                    ) : (
-                      <div className="h-5 w-5 rounded bg-stone-200 border border-stone-300" />
-                    )}
-                  </button>
-                  <div className="space-y-1 flex-1">
-                    <p className={`text-sm font-semibold leading-snug ${task.completed ? "line-through text-stone-400" : "text-stone-900"}`}>
-                      {task.title}
-                    </p>
-                    <div className="flex items-center justify-between text-xs text-stone-500 font-mono">
-                      <div className="flex items-center gap-2">
-                        <span className="rounded bg-[#F1ECE4] px-2 py-0.5 font-medium text-stone-800">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3 flex-1">
+                    <button onClick={() => toggleTask(task.id)} className="mt-0.5 cursor-pointer">
+                      {task.completed ? (
+                        <CheckCircle2 className="h-5 w-5 text-[#0D4A47]" />
+                      ) : (
+                        <div className="h-5 w-5 rounded-full border-2 border-stone-300 hover:border-[#0D4A47]" />
+                      )}
+                    </button>
+                    <div className="space-y-1 flex-1">
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="rounded bg-[#F1ECE4] px-2 py-0.5 font-mono text-[10px] font-bold text-stone-800">
                           {task.subject}
                         </span>
-                        <span className="flex items-center gap-1 text-[11px]">
-                          <Calendar className="h-3 w-3" /> {task.dueTime}
+                        <span className="font-mono text-[10px] uppercase font-bold text-amber-800">
+                          Horizon: {task.duePeriod}
                         </span>
                       </div>
-                      <button onClick={() => deleteTask(task.id)} className="text-stone-400 hover:text-red-700">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      <h4 className={`text-sm font-semibold ${task.completed ? "line-through text-stone-400" : "text-stone-900"}`}>
+                        {task.title}
+                      </h4>
                     </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs text-stone-500">
+                      {task.timeEstimate}
+                    </span>
+                    <button
+                      onClick={() => deleteTask(task.id)}
+                      className="text-stone-300 hover:text-rose-700 p-1 transition"
+                      title="Delete task"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
                 </div>
               </div>
             ))}
+
+            {filteredTasks.length === 0 && (
+              <div className="rounded-2xl border border-dashed border-[#E5DFD5] p-8 text-center space-y-2">
+                <p className="font-serif text-lg text-stone-600">No tasks in this horizon block.</p>
+                <button
+                  onClick={() => setShowAddModal(true)}
+                  className="text-xs font-bold text-[#0D4A47] hover:underline"
+                >
+                  + Add a deliberate task
+                </button>
+              </div>
+            )}
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Add Task Button */}
-      <button
-        onClick={() => setShowAddModal(true)}
-        className="w-full flex items-center justify-center gap-2 rounded-2xl border border-dashed border-[#E5DFD5] bg-[#F4EFE6] py-3.5 text-xs font-bold text-stone-800 hover:bg-[#E5DFD5] transition cursor-pointer"
-      >
-        <Plus className="h-4 w-4" />
-        <span>Add a deliberate task</span>
-      </button>
-
-      {/* Add Task Modal */}
+      {/* ADD TASK MODAL */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 backdrop-blur-xs p-4">
-          <div className="w-full max-w-sm rounded-2xl border border-[#E5DFD5] bg-white p-6 space-y-4 shadow-paper-md">
-            <div className="flex items-center justify-between border-b border-[#E5DFD5] pb-2">
+          <form
+            onSubmit={handleAddTask}
+            className="w-full max-w-md rounded-2xl border border-[#E5DFD5] bg-white p-6 space-y-4 shadow-paper-md"
+          >
+            <div className="flex items-center justify-between border-b border-[#E5DFD5] pb-3">
               <h3 className="font-serif text-xl font-bold text-stone-900">Add Deliberate Task</h3>
-              <button onClick={() => setShowAddModal(false)} className="text-stone-400 hover:text-stone-600">
+              <button
+                type="button"
+                onClick={() => setShowAddModal(false)}
+                className="text-stone-400 hover:text-stone-700"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <form onSubmit={handleAddTaskSubmit} className="space-y-3 text-xs">
+
+            <div className="space-y-3 text-xs">
               <div>
-                <label className="block font-bold text-stone-700 uppercase">Task Title</label>
+                <label className="block font-medium text-stone-700 mb-1">Task Title</label>
                 <input
                   type="text"
                   required
                   value={newTaskTitle}
                   onChange={(e) => setNewTaskTitle(e.target.value)}
-                  placeholder="e.g. AP Calculus Chapter 6 Exercise 1-5"
-                  className="mt-1 w-full rounded-xl border border-[#E5DFD5] bg-[#F9F6F0] p-2.5 text-stone-900 focus:border-[#0D4A47] focus:outline-none"
+                  placeholder="e.g. Complete AP Calculus Integration set"
+                  className="w-full rounded-xl border border-[#E5DFD5] bg-stone-50 p-2.5 text-stone-900 focus:border-[#0D4A47] focus:outline-none"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-stone-700 uppercase">Subject</label>
+                  <label className="block font-medium text-stone-700 mb-1">Subject</label>
                   <select
                     value={newTaskSubject}
                     onChange={(e) => setNewTaskSubject(e.target.value)}
-                    className="mt-1 w-full rounded-xl border border-[#E5DFD5] bg-[#F9F6F0] p-2 text-stone-900"
+                    className="w-full rounded-xl border border-[#E5DFD5] bg-stone-50 p-2.5 text-stone-900 focus:border-[#0D4A47] focus:outline-none"
                   >
-                    <option value="Math">Math</option>
-                    <option value="Physics">Physics</option>
-                    <option value="Chemistry">Chemistry</option>
-                    <option value="Economics">Economics</option>
-                    <option value="English">English</option>
-                    <option value="History">History</option>
+                    <option>Calculus BC</option>
+                    <option>AP Chemistry</option>
+                    <option>European History</option>
+                    <option>English Literature</option>
+                    <option>Physics C</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block font-bold text-stone-700 uppercase">Horizon</label>
+                  <label className="block font-medium text-stone-700 mb-1">Estimate</label>
                   <select
-                    value={newTaskPeriod}
-                    onChange={(e) => setNewTaskPeriod(e.target.value as any)}
-                    className="mt-1 w-full rounded-xl border border-[#E5DFD5] bg-[#F9F6F0] p-2 text-stone-900"
+                    value={newTaskEst}
+                    onChange={(e) => setNewTaskEst(e.target.value)}
+                    className="w-full rounded-xl border border-[#E5DFD5] bg-stone-50 p-2.5 text-stone-900 focus:border-[#0D4A47] focus:outline-none"
                   >
-                    <option value="Now">Now</option>
-                    <option value="Next">Next</option>
-                    <option value="Later">Later</option>
+                    <option>15 min</option>
+                    <option>25 min</option>
+                    <option>45 min</option>
+                    <option>60 min</option>
                   </select>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="rounded-xl border border-[#E5DFD5] bg-white px-3 py-1.5 text-stone-700"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-xl bg-[#0D4A47] px-4 py-1.5 text-white font-bold"
-                >
-                  Save Task
-                </button>
+              <div>
+                <label className="block font-medium text-stone-700 mb-1">Horizon Block</label>
+                <div className="flex gap-2">
+                  {(["Now", "Next", "Later"] as const).map((period) => (
+                    <button
+                      type="button"
+                      key={period}
+                      onClick={() => setNewTaskPeriod(period)}
+                      className={`flex-1 rounded-xl py-2 font-bold transition text-xs ${
+                        newTaskPeriod === period
+                          ? "bg-[#0D4A47] text-white shadow-xs"
+                          : "border border-[#E5DFD5] bg-stone-50 text-stone-700"
+                      }`}
+                    >
+                      {period}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </form>
-          </div>
+            </div>
+
+            <div className="pt-3 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowAddModal(false)}
+                className="rounded-xl border border-[#E5DFD5] px-4 py-2 text-xs font-semibold text-stone-700 hover:bg-stone-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="rounded-xl bg-[#0D4A47] px-4 py-2 text-xs font-bold text-white shadow-xs"
+              >
+                Save Task
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>

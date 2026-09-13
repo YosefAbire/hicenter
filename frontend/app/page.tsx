@@ -1,5 +1,5 @@
-import ShowcaseView from "@/components/ShowcaseView";
+import { redirect } from "next/navigation";
 
 export default function HomePage() {
-  return <ShowcaseView />;
+  redirect("/login");
 }

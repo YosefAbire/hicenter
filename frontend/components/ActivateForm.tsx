@@ -43,7 +43,7 @@ export default function ActivateForm({ onSuccess }: { onSuccess?: () => void }) 
   };
 
   return (
-    <div className="w-full max-w-md mx-auto space-y-6 px-4 py-6">
+    <div className="w-full max-w-xl mx-auto space-y-6 px-4 py-6 font-sans">
       {/* Header Badge & Title */}
       <div className="space-y-3">
         <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider">

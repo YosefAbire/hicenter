@@ -8,6 +8,7 @@ export interface RoutineTask {
   kind: "morning" | "evening";
   label: string;
   done: boolean;
+  time?: string;
 }
 
 export const INITIAL_SERVICE_TASKS: TaskItem[] = [
