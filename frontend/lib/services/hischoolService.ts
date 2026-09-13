@@ -1,4 +1,5 @@
 import { NoteItem, QuizItem, StudyGroup, GraduatePathway, INITIAL_NOTES, INITIAL_QUIZZES, INITIAL_STUDY_GROUPS, PRIMARY_PATHWAY } from "@/lib/mockData";
+import { api } from "@/lib/api";
 
 const NOTES_STORAGE_KEY = "hicenter_notes_data";
 const QUIZZES_STORAGE_KEY = "hicenter_quizzes_data";
@@ -192,4 +193,34 @@ export const hischoolService = {
     }
     return updated;
   },
+
+  async syncWithBackend(): Promise<void> {
+    try {
+      const [apiNotes, apiQuizzes, apiCircles] = await Promise.all([
+        api<any[]>("/hischool/notes/").catch(() => null),
+        api<any[]>("/hischool/quizzes/").catch(() => null),
+        api<any[]>("/hischool/circles/").catch(() => null),
+      ]);
+
+      if (Array.isArray(apiNotes) && apiNotes.length > 0) {
+        const mappedNotes: NoteItem[] = apiNotes.map((n) => ({
+          id: String(n.id),
+          title: n.title,
+          subject: n.subject || "General",
+          chapter: n.chapter || "Ch. 1",
+          author: n.author || "Faculty",
+          date: n.created_at ? new Date(n.created_at).toLocaleDateString() : "Term 2",
+          verified: Boolean(n.is_verified),
+          verifiedBy: n.verified_by,
+          summary: n.summary || "",
+          downloadCount: n.download_count || 0,
+        }));
+        if (typeof window !== "undefined") {
+          localStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(mappedNotes));
+        }
+      }
+    } catch (e) {
+      console.log("Using offline hischool persistence.");
+    }
+  }
 };

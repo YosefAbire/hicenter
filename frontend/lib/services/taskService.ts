@@ -1,4 +1,5 @@
 import { TaskItem } from "@/lib/mockData";
+import { api } from "@/lib/api";
 
 const TASKS_STORAGE_KEY = "hicenter_tasks_data";
 const ROUTINES_STORAGE_KEY = "hicenter_routines_data";
@@ -104,6 +105,19 @@ export const taskService = {
     };
     const updated = [newTask, ...current];
     this.saveTasks(updated);
+
+    // Sync asynchronously to backend REST API if server available
+    api<any>("/hitime/tasks/", {
+      method: "POST",
+      body: JSON.stringify({
+        title: task.title,
+        subject: task.subject,
+        due_period: task.duePeriod.toLowerCase(),
+        estimated_minutes: parseInt(task.timeEstimate) || 25,
+        completed: task.completed,
+      }),
+    }).catch(() => {});
+
     return newTask;
   },
 
@@ -113,6 +127,15 @@ export const taskService = {
       t.id === id ? { ...t, completed: !t.completed } : t
     );
     this.saveTasks(updated);
+
+    const target = updated.find(t => t.id === id);
+    if (target && !id.startsWith("task_")) {
+      api<any>(`/hitime/tasks/${id}/`, {
+        method: "PATCH",
+        body: JSON.stringify({ completed: target.completed }),
+      }).catch(() => {});
+    }
+
     return updated;
   },
 
@@ -120,6 +143,13 @@ export const taskService = {
     const current = this.getTasks();
     const updated = current.filter((t) => t.id !== id);
     this.saveTasks(updated);
+
+    if (!id.startsWith("task_")) {
+      api<any>(`/hitime/tasks/${id}/`, {
+        method: "DELETE",
+      }).catch(() => {});
+    }
+
     return updated;
   },
 
@@ -143,5 +173,27 @@ export const taskService = {
       localStorage.setItem(ROUTINES_STORAGE_KEY, JSON.stringify(updated));
     }
     return updated;
+  },
+
+  async syncWithBackend(): Promise<TaskItem[]> {
+    try {
+      const apiTasks = await api<any[]>("/hitime/tasks/");
+      if (Array.isArray(apiTasks) && apiTasks.length > 0) {
+        const mapped: TaskItem[] = apiTasks.map((t) => ({
+          id: String(t.id),
+          title: t.title,
+          subject: t.subject || "General",
+          dueTime: "Today",
+          timeEstimate: `${t.estimated_minutes || 25} min`,
+          duePeriod: (t.due_period ? t.due_period.charAt(0).toUpperCase() + t.due_period.slice(1) : "Now") as any,
+          completed: Boolean(t.completed),
+        }));
+        this.saveTasks(mapped);
+        return mapped;
+      }
+    } catch (e) {
+      console.log("Using offline task persistence.");
+    }
+    return this.getTasks();
   },
 };

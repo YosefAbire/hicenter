@@ -1,4 +1,5 @@
 import { CURRENT_STUDENT, StudentProfile } from "@/lib/mockData";
+import { api } from "@/lib/api";
 
 export type Role = "student" | "school_admin" | "platform_admin" | "teacher" | "graduate";
 
@@ -78,6 +79,21 @@ export const authService = {
       avatarInitials: normalized.slice(0, 2).toUpperCase(),
     };
     this.setCurrentSession(matched);
+
+    // Attempt backend token acquisition if server is reachable
+    if (password) {
+      api<{ access?: string }>("/auth/login/", {
+        method: "POST",
+        body: JSON.stringify({ email: normalized, password }),
+      })
+        .then((res) => {
+          if (res?.access) {
+            this.setCurrentSession({ ...matched, token: res.access });
+          }
+        })
+        .catch(() => {});
+    }
+
     return matched;
   },
 
@@ -109,6 +125,12 @@ export const authService = {
     }
     const activatedUser = DEFAULT_USERS["scholar@academy.edu"];
     this.setCurrentSession(activatedUser);
+
+    api<any>("/auth/activate/", {
+      method: "POST",
+      body: JSON.stringify({ token, password }),
+    }).catch(() => {});
+
     return { success: true, user: activatedUser };
   },
 
@@ -116,5 +138,6 @@ export const authService = {
     if (typeof window !== "undefined") {
       localStorage.removeItem(STORAGE_KEY);
     }
+    api<any>("/auth/logout/", { method: "POST" }).catch(() => {});
   },
 };
