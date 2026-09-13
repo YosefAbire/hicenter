@@ -20,9 +20,9 @@ SECRET_KEY = os.getenv(
     "dev-only-change-me-use-at-least-32-bytes",
 )
 DEBUG = os.getenv("DJANGO_DEBUG", "true").lower() in {"1", "true", "yes"}
-ALLOWED_HOSTS = [
+ALLOWED_HOSTS = ["*", "0.0.0.0", "127.0.0.1", "localhost"] + [
     host.strip()
-    for host in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,0.0.0.0,*").split(",")
+    for host in os.getenv("DJANGO_ALLOWED_HOSTS", "").split(",")
     if host.strip()
 ]
 
