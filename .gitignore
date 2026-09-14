@@ -21,3 +21,9 @@ frontend/out/
 # OS / IDE
 .DS_Store
 *.log
+
+# Scala
+scala-backend/target/
+scala-backend/project/target/
+scala-backend/.bsp/
+

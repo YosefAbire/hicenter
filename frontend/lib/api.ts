@@ -64,7 +64,7 @@ function extractMessage(body: unknown): string {
   return "";
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "/django-api";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "/api";
 
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
