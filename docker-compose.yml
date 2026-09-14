@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:16
+    image: pgvector/pgvector:pg16
     environment:
       POSTGRES_DB: hicenter
       POSTGRES_USER: hicenter
@@ -14,6 +14,34 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  hicenter-ai:
+    build:
+      context: ./hicenter-ai
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8001
+      - INTERNAL_SERVICE_SECRET=hicenter-s2s-secret-key-change-in-production-32bytes
+      - DATABASE_URL=postgresql+asyncpg://hicenter:hicenter@db:5432/hicenter
+    depends_on:
+      db:
+        condition: service_healthy
+
+  scala-backend:
+    build:
+      context: ./scala-backend
+      dockerfile: Dockerfile
+    ports:
+      - "9000:9000"
+    environment:
+      - HICENTER_AI_URL=http://hicenter-ai:8001
+      - HICENTER_AI_SECRET=hicenter-s2s-secret-key-change-in-production-32bytes
+    depends_on:
+      - db
+      - hicenter-ai
 
 volumes:
   postgres_data:

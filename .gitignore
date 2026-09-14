@@ -12,6 +12,7 @@ db.sqlite3
 backend/.env
 frontend/.env
 frontend/.env.local
+hicenter-ai/.env
 
 # Node / Next
 frontend/node_modules/
@@ -22,8 +23,6 @@ frontend/out/
 .DS_Store
 *.log
 
-# Scala
-scala-backend/target/
-scala-backend/project/target/
-scala-backend/.bsp/
-
+# Sub-repositories
+scala-backend/
+hicenter-ai/
