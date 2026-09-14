@@ -1,211 +1,120 @@
-# 🚀 HiCenter
+# 🚀 HiCenter — Senior High School Learning & Planning Ecosystem
 
-HiCenter is a student-first learning and planning platform built exclusively for Grade 11 and Grade 12 students.
+HiCenter is a student-first academic center and planning platform designed exclusively for Grade 11 and Grade 12 high school students.
 
-It is designed as a daily academic center where students learn, manage their time, and understand their future — supported by teachers, schools, and graduates, without losing student ownership.
-
-HiCenter is not a traditional LMS.  
-It is a focused system built around how senior students actually study, plan, and prepare for life after high school.
+It integrates academic learning (**HiSchool**), goal-oriented focus and time management (**HiTime**), and AI-driven study assistance into a unified, secure system.
 
 ---
 
-## 🎯 The Problem HiCenter Solves
+## 🏛️ System Architecture
 
-Senior high school students consistently face three challenges:
+HiCenter is built using a modern **Three-Repository Architecture**:
 
-1. Learning materials are scattered and unreliable  
-2. Students struggle with planning, focus, and consistency  
-3. Career and university awareness comes too late — or not at all  
+```
+ ┌─────────────────────────────────────────────────────────┐
+ │               hicenter (Next.js 15 Frontend)            │
+ └────────────────────────────┬────────────────────────────┘
+                              │
+                              │  REST / HttpOnly Cookie JWT
+                              ▼
+ ┌─────────────────────────────────────────────────────────┐
+ │            scala-backend (Scala 3 + Play Framework)     │
+ │            [Primary System of Record & Auth]            │
+ └────────────────────────────┬────────────────────────────┘
+                              │
+                              │  Internal S2S HTTP + X-Internal-Service-Key
+                              ▼
+ ┌─────────────────────────────────────────────────────────┐
+ │             hicenter-ai (Python 3.11 + FastAPI)         │
+ │             [RAG, NLP, ML & AI Study Assistant]         │
+ └────────────────────────────┬────────────────────────────┘
+                              │
+                              ▼
+               ┌─────────────────────────────┐
+               │   PostgreSQL + pgvector     │
+               └─────────────────────────────┘
+```
 
-HiCenter brings learning, planning, and future awareness into one coherent system.
+### Core Architecture Principles:
+1. **Frontend Isolation**: The frontend (`hicenter`) communicates ONLY with `scala-backend`. It **never** calls `hicenter-ai` directly.
+2. **Scala System of Record**: `scala-backend` manages all primary entity state, user authentication, grade access control, and database persistence.
+3. **AI Intelligence Engine**: `hicenter-ai` acts as an advisory microservice delivering RAG vector search, NLP summarization/quiz generation, and ML task breakdown.
+4. **Service-to-Service Security**: Requests between Scala and FastAPI are authenticated via `X-Internal-Service-Key`.
+
+---
+
+## 📦 Repositories
+
+| Repository | Tech Stack | Role / Responsibilities | Repository Link |
+| :--- | :--- | :--- | :--- |
+| **`hicenter`** | Next.js 15, TypeScript, Tailwind CSS | Web application UI & reactive state management | [GitHub](https://github.com/YosefAbire/hicenter) |
+| **`scala-backend`** | Scala 3.3, Play Framework 3, PostgreSQL | Primary API gateway, JWT auth, database persistence & AI proxy | [GitHub](https://github.com/YosefAbire/scala-backend) |
+| **`hicenter-ai`** | Python 3.11, FastAPI, pgvector, NumPy | Internal AI service for RAG, NLP, ML task breakdown & tutoring | [GitHub](https://github.com/YosefAbire/hicenter-ai) |
 
 ---
 
-## 🧭 Core Philosophy
+## 📘 Modules Summary
 
-- Students are the drivers
-- Teachers guide and validate
-- Graduates share real-world perspective
-- Schools integrate and support
-- Families observe and encourage
-
-HiCenter minimizes control and maximizes clarity.
-
----
-
-## 🧩 System Overview
-
-HiCenter is the parent platform composed of two tightly integrated core modules:
-
----
-
-### 📘 HiSchool — Learning, Community & Future Awareness
-
-HiSchool handles what students learn, how they collaborate, and how they understand what comes next.
-
-Core Features
-- Subject-based notes (Grade 11 & 12 only)
-- Chapter-based quizzes and mock exams
-- Student note sharing and study groups
-- Teacher-verified academic content
-
-Graduate Pathways (Integrated Feature)
-- Verified graduates share:
-  - University and major
-  - Why they chose their field
-  - Challenges they faced
-  - What Grade 11–12 students should focus on
-- Students explore pathways by:
-  - Subject strengths
-  - Career interests
-  - University options
-
-> This feature builds awareness, not pressure.  
-> Students see possibilities early, while still focusing on school.
-
----
+### 📘 HiSchool — Learning & Academic Archive
+- Grade 11 & Grade 12 verified subject notes & notes sharing.
+- Interactive chapter quizzes & study circles.
+- Graduate pathway advice & guidance from verified alumni.
+- AI-powered note summarization, key takeaway extraction, and self-quiz generator.
 
 ### ⏱️ HiTime — Planning, Focus & Execution
-
-HiTime manages how students use their time and turn intention into action.
-
-Core Features
-- Priority-based task management (Now / Next / Later)
-- Automatic task breakdown
-- Focus timers (Pomodoro & deep focus)
-- Study routines and schedules
-- Productivity analytics and streaks
-
-Goal Alignment
-- When students explore graduate pathways in HiSchool:
-  - HiTime subtly aligns study focus
-  - Suggests relevant subject emphasis
-  - Helps build routines that match long-term interests
-
-No forcing. No decisions locked in. Just alignment.
+- Priority task management (Now / Next / Later).
+- ML-driven automatic study goal breakdown into subtasks with duration estimates.
+- Pomodoro and deep focus timers with routine trackers.
 
 ---
 
-## 🏗️ Phase 1 Scope (MVP)
+## ⚡ Quickstart & Deployment
 
-Phase 1 focuses on core value and real student usage.
+### Option A: Full Multi-Service Docker Compose (Recommended)
 
-### Included
-- Grade 11 & 12 only (hard restriction)
-- School-based onboarding
-- Student dashboard
-- Notes, quizzes, and study groups
-- Tasks, routines, and focus timers
-- Graduate pathway content
-- Teacher content verification
-- Clean, modern web UI
+Run all three services and PostgreSQL with `pgvector`:
 
-### Excluded (Intentionally)
-- Payments
-- AI features
-- Attendance tracking
-- Grading systems
-- Parent interaction (future phase)
-- Mobile app (Flutter planned later)
+```bash
+docker-compose up --build
+```
+
+- **Frontend**: `http://localhost:3000`
+- **Scala Backend**: `http://localhost:9000`
+- **FastAPI AI Service**: `http://localhost:8001`
+- **PostgreSQL**: `localhost:5433`
 
 ---
 
-## 👥 User Roles
+### Option B: Local Microservices Setup
 
-### 🎓 Students (Primary Users)
-- Grade 11 & 12 only
-- Use HiSchool and HiTime daily
-- Learn, plan, collaborate, and explore futures
+#### 1. Start Database
+```bash
+docker-compose up -d db
+```
 
-### 👨‍🏫 Teachers (Support Role)
-- Upload and verify academic content
-- Share guidance and announcements
-- No control over student planning or routines
+#### 2. Start `hicenter-ai` (FastAPI)
+```bash
+cd hicenter-ai
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+```
 
-### 🎓 Graduates (Advisory Role)
-- Verified contributors
-- Share structured experiences
-- No direct control or mentoring (Phase 1)
-
-### 🏫 School Admin
-- Register schools
-- Upload student lists
-- Assign teachers
-- Manage academic calendar
-
-> There is no public signup.  
-> Access is controlled at the school level.
-
----
-
-## 🔐 Grade Restriction (System-Level)
-
-HiCenter is structurally limited to Grade 11 and Grade 12:
-
-- Accounts are created through schools
-- Every student is tagged with grade level
-- Content, communities, and analytics are grade-locked
-- Enforcement happens at the API and database level
- 
----
-
-## 🛠️ Tech Stack
-
-### Frontend
-- **Framework**: Next.js 15 (React 19, App Router)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS & Glassmorphism design system
-- **State & Services**: Custom reactive service layer with REST API fallback
-- **Design System**: Modern, high-contrast, distraction-free aesthetic tailored for Grade 11–12 students
-
-### Backend Services
-
-#### 🔴 Scala Play Backend (Primary High-Performance API)
-- **Repository**: [https://github.com/YosefAbire/scala-backend.git](https://github.com/YosefAbire/scala-backend.git)
-- **Language**: Scala 3 (3.3.3)
-- **Framework**: Play Framework 3 (PlayScala)
-- **Authentication**: JWT-based session security (`jwt-play-json`) & BCrypt password hashing
-- **Architecture**: Modular controller-repository layer with Guice dependency injection
-- **Endpoints**: `/api/auth/*`, `/api/schools/*`, `/api/hischool/*`, `/api/hitime/*`
-
-#### 🐍 Python Django Backend (Alternative Service)
-- **Framework**: Django REST Framework (DRF)
-- **Authentication**: SimpleJWT & RBAC
-- **Features**: Relational modeling, admin suite
-
-### Database & Security
-- **Database**: PostgreSQL 16 (or SQLite development storage)
-- **Security**: HttpOnly cookie-based JWT authentication & school-level grade isolation
-
----
-
-## ⚡ Quickstart & Local Setup
-
-### 1. Start the Scala Play Backend
+#### 3. Start `scala-backend` (Play Framework)
 ```bash
 cd scala-backend
 sbt run
 ```
-The Scala backend will launch on `http://localhost:9000`.
 
-### 2. Start the Next.js Frontend
+#### 4. Start `hicenter` (Next.js Frontend)
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-The frontend will start on `http://localhost:3000` (or `http://localhost:3005`).
-Next.js will automatically proxy `/api/*` requests to the Scala backend on port 9000.
 
 ---
 
-## 📜 License 
-To be defined.
-
----
-
-**HiCenter**  
-*Learn. Plan. Grow — at the center.*
-
-
-
+## 📜 License
+Internal / Proprietary — All Rights Reserved.
