@@ -151,36 +151,61 @@ HiCenter is structurally limited to Grade 11 and Grade 12:
 
 ## 🛠️ Tech Stack
 
-### Frontend (Phase 1)
-- React
-- TypeScript
-- Modern component architecture
-- Mobile-friendly web UI
-- Clean, distraction-free design
+### Frontend
+- **Framework**: Next.js 15 (React 19, App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS & Glassmorphism design system
+- **State & Services**: Custom reactive service layer with REST API fallback
+- **Design System**: Modern, high-contrast, distraction-free aesthetic tailored for Grade 11–12 students
 
-### Mobile (Future Phase)
-- Flutter
-- Android-first
-- Shared API layer
+### Backend Services
 
-### Backend
-- Python
-- Django
-- Django REST Framework (DRF)
-- JWT authentication
-- Role-Based Access Control (RBAC)
+#### 🔴 Scala Play Backend (Primary High-Performance API)
+- **Repository**: [https://github.com/YosefAbire/scala-backend.git](https://github.com/YosefAbire/scala-backend.git)
+- **Language**: Scala 3 (3.3.3)
+- **Framework**: Play Framework 3 (PlayScala)
+- **Authentication**: JWT-based session security (`jwt-play-json`) & BCrypt password hashing
+- **Architecture**: Modular controller-repository layer with Guice dependency injection
+- **Endpoints**: `/api/auth/*`, `/api/schools/*`, `/api/hischool/*`, `/api/hitime/*`
 
-### Database
-- PostgreSQL
-- Strong relational modeling
-- School-based and grade-based data isolation
+#### 🐍 Python Django Backend (Alternative Service)
+- **Framework**: Django REST Framework (DRF)
+- **Authentication**: SimpleJWT & RBAC
+- **Features**: Relational modeling, admin suite
+
+### Database & Security
+- **Database**: PostgreSQL 16 (or SQLite development storage)
+- **Security**: HttpOnly cookie-based JWT authentication & school-level grade isolation
 
 ---
 
-### license 
+## ⚡ Quickstart & Local Setup
+
+### 1. Start the Scala Play Backend
+```bash
+cd scala-backend
+sbt run
+```
+The Scala backend will launch on `http://localhost:9000`.
+
+### 2. Start the Next.js Frontend
+```bash
+cd frontend
+npm install
+npm run dev
+```
+The frontend will start on `http://localhost:3000` (or `http://localhost:3005`).
+Next.js will automatically proxy `/api/*` requests to the Scala backend on port 9000.
+
+---
+
+## 📜 License 
 To be defined.
 
-**HiCenter**
-*Learn. Plan. Grow- at the center.*
+---
+
+**HiCenter**  
+*Learn. Plan. Grow — at the center.*
+
 
 
