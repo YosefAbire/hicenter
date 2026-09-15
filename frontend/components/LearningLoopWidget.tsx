@@ -125,28 +125,38 @@ export const LearningLoopWidget: React.FC<Props> = ({ onTaskConverted }) => {
               <span className="text-xs text-slate-400">{masteries.length} Subjects Evaluated</span>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-5">
               {masteries.map((m, idx) => (
-                <div key={idx} className="space-y-1.5">
-                  <div className="flex justify-between text-xs font-medium">
-                    <span className="text-slate-300 font-semibold">{m.subject}</span>
+                <div key={idx} className="space-y-2 bg-slate-900/60 border border-slate-800/60 rounded-xl p-3.5">
+                  <div className="flex justify-between items-center text-xs font-medium">
+                    <span className="text-slate-200 font-bold text-sm">{m.subject}</span>
                     <div className="flex items-center gap-2">
-                      {m.weakTopics.length > 0 && (
-                        <span className="text-[10px] text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-400/20">
-                          Weak Area: {m.weakTopics[0]}
-                        </span>
-                      )}
-                      <span className={`px-2 py-0.5 text-xs rounded border ${getMasteryBadgeColor(m.masteryScore)}`}>
-                        {m.masteryScore}%
+                      <span className={`px-2.5 py-0.5 text-xs font-semibold rounded border ${getMasteryBadgeColor(m.masteryScore)}`}>
+                        {m.masteryScore}% Overall
                       </span>
                     </div>
                   </div>
+
                   <div className="w-full bg-slate-800/80 rounded-full h-2 overflow-hidden p-0.5 border border-slate-700/50">
                     <div
                       className={`h-full rounded-full bg-gradient-to-r ${getMasteryBarGradient(m.masteryScore)} transition-all duration-700`}
                       style={{ width: `${m.masteryScore}%` }}
                     />
                   </div>
+
+                  {/* Topic-Level Breakdown */}
+                  {m.topicMasteries && m.topicMasteries.length > 0 && (
+                    <div className="pt-2 border-t border-slate-800/50 grid grid-cols-2 gap-2">
+                      {m.topicMasteries.map((tm, tIdx) => (
+                        <div key={tIdx} className="bg-slate-950/50 p-2 rounded-lg border border-slate-800/40 flex justify-between items-center text-[11px]">
+                          <span className="text-slate-300 truncate max-w-[100px]">{tm.topic}</span>
+                          <span className={`font-semibold px-1.5 py-0.5 rounded text-[10px] ${tm.masteryScore < 70 ? 'text-rose-400 bg-rose-500/10' : 'text-emerald-400 bg-emerald-500/10'}`}>
+                            {tm.masteryScore}%
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
