@@ -243,6 +243,27 @@ export const hischoolService = {
     return updated;
   },
 
+  async fetchDiscussions(circleId: string): Promise<DiscussionPost[]> {
+    const numId = parseInt(circleId.replace("sg", "")) || 1;
+    try {
+      const apiPosts = await api<any[]>(`/hischool/circles/${numId}/discussions/`);
+      if (Array.isArray(apiPosts) && apiPosts.length > 0) {
+        return apiPosts.map((p) => ({
+          id: p.id || `disc_${Date.now()}`,
+          circleId: circleId,
+          author: p.author || "Scholar",
+          authorInitials: p.authorInitials || "SC",
+          timestamp: p.timestamp || "Just now",
+          content: p.content,
+          likes: p.likes || 1,
+        }));
+      }
+    } catch (e) {
+      console.warn("Failed to fetch discussions from backend");
+    }
+    return this.getDiscussions(circleId);
+  },
+
   getDiscussions(circleId: string): DiscussionPost[] {
     if (typeof window === "undefined") return INITIAL_DISCUSSIONS;
     try {
@@ -258,6 +279,7 @@ export const hischoolService = {
   },
 
   addDiscussionPost(circleId: string, author: string, initials: string, content: string): DiscussionPost[] {
+    const numId = parseInt(circleId.replace("sg", "")) || 1;
     const newPost: DiscussionPost = {
       id: `disc_${Date.now()}`,
       circleId,
@@ -267,6 +289,12 @@ export const hischoolService = {
       content,
       likes: 1,
     };
+
+    api<any>(`/hischool/circles/${numId}/discussions/`, {
+      method: "POST",
+      body: JSON.stringify({ author, authorInitials: initials, content }),
+    }).catch(() => {});
+
     let all = INITIAL_DISCUSSIONS;
     if (typeof window !== "undefined") {
       try {
@@ -278,6 +306,7 @@ export const hischoolService = {
     }
     return all.filter((d) => d.circleId === circleId);
   },
+
 
   // Pathways
   async fetchPathways(): Promise<GraduatePathway[]> {

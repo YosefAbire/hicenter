@@ -166,14 +166,36 @@ export const taskService = {
 
   toggleRoutine(id: string): RoutineTask[] {
     const current = this.getChecklistRoutines();
+    const target = current.find((r) => r.id === id);
     const updated = current.map((r) =>
       r.id === id ? { ...r, done: !r.done } : r
     );
     if (typeof window !== "undefined") {
       localStorage.setItem(ROUTINES_STORAGE_KEY, JSON.stringify(updated));
     }
+
+    if (target) {
+      const numId = parseInt(id.replace("mr", "").replace("er", "")) || 1;
+      api<any>(`/hitime/routines/${numId}/`, {
+        method: "PATCH",
+        body: JSON.stringify({ done: !target.done }),
+      }).catch(() => {});
+    }
+
     return updated;
   },
+
+  async logFocusSession(mode: string, durationMinutes: number): Promise<void> {
+    try {
+      await api<any>("/hitime/sessions/", {
+        method: "POST",
+        body: JSON.stringify({ mode, duration_minutes: durationMinutes }),
+      });
+    } catch (e) {
+      console.warn("Failed to log focus session to backend");
+    }
+  },
+
 
   async syncWithBackend(): Promise<TaskItem[]> {
     try {
