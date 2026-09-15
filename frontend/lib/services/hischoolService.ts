@@ -66,6 +66,29 @@ export const ALL_PATHWAYS: GraduatePathway[] = [
 
 export const hischoolService = {
   // Notes
+  async fetchNotes(): Promise<NoteItem[]> {
+    try {
+      const apiNotes = await api<any[]>("/hischool/notes/");
+      if (Array.isArray(apiNotes) && apiNotes.length > 0) {
+        return apiNotes.map((n) => ({
+          id: String(n.id),
+          title: n.title,
+          subject: n.subject || "General",
+          chapter: n.chapter || "Ch. 1",
+          author: n.author || "Faculty",
+          date: n.created_at ? new Date(n.created_at).toLocaleDateString() : "Term 2",
+          verified: Boolean(n.is_verified),
+          verifiedBy: n.verified_by,
+          summary: n.summary || "",
+          downloadCount: n.download_count || 0,
+        }));
+      }
+    } catch (e) {
+      console.warn("Failed to fetch notes from backend, using local state");
+    }
+    return this.getNotes();
+  },
+
   getNotes(): NoteItem[] {
     if (typeof window === "undefined") return INITIAL_NOTES;
     try {
@@ -75,6 +98,52 @@ export const hischoolService = {
       console.error("Failed to load notes", e);
     }
     return INITIAL_NOTES;
+  },
+
+  async createNote(title: string, subject: string, summary: string): Promise<NoteItem> {
+    try {
+      const created = await api<any>("/hischool/notes/", {
+        method: "POST",
+        body: JSON.stringify({ title, subject, summary }),
+      });
+      const newNote: NoteItem = {
+        id: String(created.id || Date.now()),
+        title: created.title || title,
+        subject: created.subject || subject,
+        chapter: "Chapter 1",
+        author: "Faculty Chair",
+        date: "Today",
+        verified: true,
+        verifiedBy: "Verified Faculty",
+        summary: created.summary || summary,
+        downloadCount: 0,
+      };
+      const current = this.getNotes();
+      const updated = [newNote, ...current];
+      if (typeof window !== "undefined") {
+        localStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(updated));
+      }
+      return newNote;
+    } catch (e) {
+      const fallbackNote: NoteItem = {
+        id: `note_${Date.now()}`,
+        title,
+        subject,
+        chapter: "Chapter 1",
+        author: "Faculty Chair",
+        date: "Today",
+        verified: true,
+        verifiedBy: "Verified Faculty",
+        summary,
+        downloadCount: 0,
+      };
+      const current = this.getNotes();
+      const updated = [fallbackNote, ...current];
+      if (typeof window !== "undefined") {
+        localStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(updated));
+      }
+      return fallbackNote;
+    }
   },
 
   incrementDownload(id: string): NoteItem[] {
@@ -89,6 +158,26 @@ export const hischoolService = {
   },
 
   // Quizzes
+  async fetchQuizzes(): Promise<QuizItem[]> {
+    try {
+      const apiQuizzes = await api<any[]>("/hischool/quizzes/");
+      if (Array.isArray(apiQuizzes) && apiQuizzes.length > 0) {
+        return apiQuizzes.map((q) => ({
+          id: String(q.id),
+          title: q.title,
+          subject: q.subject,
+          kind: q.kind || "formative",
+          questionsCount: q.questions_count || 10,
+          estimatedMinutes: q.estimated_minutes || 15,
+          masteryScore: q.mastery_score,
+        }));
+      }
+    } catch (e) {
+      console.warn("Failed to fetch quizzes from backend");
+    }
+    return this.getQuizzes();
+  },
+
   getQuizzes(): QuizItem[] {
     if (typeof window === "undefined") return INITIAL_QUIZZES;
     try {
@@ -112,6 +201,26 @@ export const hischoolService = {
   },
 
   // Circles
+  async fetchCircles(): Promise<StudyGroup[]> {
+    try {
+      const apiCircles = await api<any[]>("/hischool/circles/");
+      if (Array.isArray(apiCircles) && apiCircles.length > 0) {
+        return apiCircles.map((c) => ({
+          id: String(c.id),
+          name: c.name,
+          subject: c.subject,
+          nextSession: c.next_session || "Tomorrow",
+          isLive: Boolean(c.is_live),
+          membersCount: c.members_count || 1,
+          lead: c.lead || "Faculty Lead",
+        }));
+      }
+    } catch (e) {
+      console.warn("Failed to fetch circles from backend");
+    }
+    return this.getCircles();
+  },
+
   getCircles(): StudyGroup[] {
     if (typeof window === "undefined") return INITIAL_STUDY_GROUPS;
     try {
@@ -171,6 +280,27 @@ export const hischoolService = {
   },
 
   // Pathways
+  async fetchPathways(): Promise<GraduatePathway[]> {
+    try {
+      const apiPathways = await api<any[]>("/hischool/pathways/");
+      if (Array.isArray(apiPathways) && apiPathways.length > 0) {
+        return apiPathways.map((p) => ({
+          id: String(p.id),
+          title: p.title,
+          alumName: p.alum_name,
+          gradYear: p.grad_year,
+          institution: p.institution,
+          quote: p.quote,
+          advice: p.advice,
+          electives: p.electives || [],
+        }));
+      }
+    } catch (e) {
+      console.warn("Failed to fetch pathways from backend");
+    }
+    return ALL_PATHWAYS;
+  },
+
   getPathways(): GraduatePathway[] {
     return ALL_PATHWAYS;
   },
@@ -192,35 +322,5 @@ export const hischoolService = {
       localStorage.setItem(SAVED_PATHWAYS_KEY, JSON.stringify(updated));
     }
     return updated;
-  },
-
-  async syncWithBackend(): Promise<void> {
-    try {
-      const [apiNotes, apiQuizzes, apiCircles] = await Promise.all([
-        api<any[]>("/hischool/notes/").catch(() => null),
-        api<any[]>("/hischool/quizzes/").catch(() => null),
-        api<any[]>("/hischool/circles/").catch(() => null),
-      ]);
-
-      if (Array.isArray(apiNotes) && apiNotes.length > 0) {
-        const mappedNotes: NoteItem[] = apiNotes.map((n) => ({
-          id: String(n.id),
-          title: n.title,
-          subject: n.subject || "General",
-          chapter: n.chapter || "Ch. 1",
-          author: n.author || "Faculty",
-          date: n.created_at ? new Date(n.created_at).toLocaleDateString() : "Term 2",
-          verified: Boolean(n.is_verified),
-          verifiedBy: n.verified_by,
-          summary: n.summary || "",
-          downloadCount: n.download_count || 0,
-        }));
-        if (typeof window !== "undefined") {
-          localStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(mappedNotes));
-        }
-      }
-    } catch (e) {
-      console.log("Using offline hischool persistence.");
-    }
   }
 };
