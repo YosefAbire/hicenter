@@ -25,6 +25,7 @@ import { TaskItem, NoteItem, QuizItem, GraduatePathway } from "@/lib/mockData";
 import { taskService } from "@/lib/services/taskService";
 import { hischoolService } from "@/lib/services/hischoolService";
 import { authService } from "@/lib/services/authService";
+import { LearningLoopWidget } from "./LearningLoopWidget";
 
 export default function StudentDashboardView({
   onNavigateTab
@@ -57,6 +58,10 @@ export default function StudentDashboardView({
   const toggleTask = (id: string) => {
     const updated = taskService.toggleTask(id);
     setTasks(updated);
+  };
+
+  const handleTaskConverted = () => {
+    setTasks(taskService.getTasks());
   };
 
   const handleOpenQuiz = (quiz: QuizItem) => {
@@ -116,6 +121,9 @@ export default function StudentDashboardView({
           Two primary milestones are slotted before your afternoon chemistry lab. Review your current priorities or start a deep focus timer block below.
         </p>
       </div>
+
+      {/* PHASE 4: LEARNING INTELLIGENCE LOOP WIDGET 🧠 */}
+      <LearningLoopWidget onTaskConverted={handleTaskConverted} />
 
       {/* Main Responsive Grid Layout (Desktop 2-Column: 2/3 and 1/3, Mobile 1-Column) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

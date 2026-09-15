@@ -318,6 +318,7 @@ export const hischoolService = {
           title: p.title,
           alumName: p.alum_name,
           gradYear: p.grad_year,
+          currentField: p.current_field || "Academic Research",
           institution: p.institution,
           quote: p.quote,
           advice: p.advice,

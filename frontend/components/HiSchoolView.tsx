@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { NoteItem, QuizItem, StudyGroup, GraduatePathway } from "@/lib/mockData";
 import { hischoolService, DiscussionPost } from "@/lib/services/hischoolService";
+import { LearningLoopWidget } from "./LearningLoopWidget";
 
 export default function HiSchoolView() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -116,6 +117,9 @@ export default function HiSchoolView() {
           />
         </div>
       </div>
+
+      {/* PHASE 4: LEARNING INTELLIGENCE LOOP WIDGET 🧠 */}
+      <LearningLoopWidget />
 
       {/* Subject Filter Chips */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs font-mono">

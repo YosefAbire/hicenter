@@ -21,7 +21,7 @@ export default function ActivateForm({ onSuccess }: { onSuccess?: () => void }) 
   const passwordsMatch = password.length > 0 && password === confirmPassword;
   const isValid = hasLength && hasMixed && passwordsMatch && agreed;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValid) {
       setError("Please satisfy all password requirements and accept the Honor Agreement.");
@@ -30,16 +30,19 @@ export default function ActivateForm({ onSuccess }: { onSuccess?: () => void }) 
     setError("");
     setLoading(true);
 
-    setTimeout(() => {
+    try {
+      const res = await authService.activateToken("demo_token", password);
       setLoading(false);
-      const res = authService.activateToken("demo_token", password);
       if (res.success) {
         setActivated(true);
         if (onSuccess) onSuccess();
       } else {
         setError(res.message || "Activation failed.");
       }
-    }, 700);
+    } catch (err) {
+      setLoading(false);
+      setError("Activation failed.");
+    }
   };
 
   return (
