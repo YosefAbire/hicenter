@@ -17,7 +17,7 @@ import {
   Check
 } from "lucide-react";
 import { TaskItem } from "@/lib/mockData";
-import { taskService } from "@/lib/services/taskService";
+import { taskService, RoutineTask, INITIAL_SERVICE_TASKS, INITIAL_SERVICE_ROUTINES } from "@/lib/services/taskService";
 
 export default function HiTimeView() {
   const [timerMode, setTimerMode] = useState<"focus" | "extended" | "rest">("focus");
@@ -28,8 +28,8 @@ export default function HiTimeView() {
   const [showAddModal, setShowAddModal] = useState(false);
 
   // Task & Routine States
-  const [tasks, setTasks] = useState<TaskItem[]>([]);
-  const [routines, setRoutines] = useState(taskService.getChecklistRoutines());
+  const [tasks, setTasks] = useState<TaskItem[]>(INITIAL_SERVICE_TASKS);
+  const [routines, setRoutines] = useState<RoutineTask[]>(INITIAL_SERVICE_ROUTINES);
 
   // Form states for new task
   const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -39,7 +39,9 @@ export default function HiTimeView() {
 
   useEffect(() => {
     setTasks(taskService.getTasks());
+    setRoutines(taskService.getChecklistRoutines());
   }, []);
+
 
   // Timer countdown & chime sound
   useEffect(() => {
